@@ -1,5 +1,6 @@
 use bevy::prelude::{
-    Color, Commands, Component, Res, Sprite, SpriteBundle, SpriteSheetBundle, Transform, Vec2, Vec3,
+    AssetServer, Assets, BuildChildren, Color, Commands, Component, FromWorld, Handle, Res,
+    Resource, SpriteSheetBundle, TextureAtlas, TextureAtlasSprite, Transform, Vec2, Vec3, World,
 };
 
 use crate::{
@@ -10,27 +11,60 @@ use crate::{
 #[derive(Component)]
 pub struct Trigger;
 
-pub fn spawn_map(mut commands: Commands, animations: Res<Animations>) {
-    commands.spawn((
-        SpriteBundle {
-            transform: Transform::from_translation(Vec3::NEG_Y * 16.),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(200., 5.)),
-                color: Color::WHITE,
+pub fn spawn_map(
+    mut commands: Commands,
+    animations: Res<Animations>,
+    terrain: Res<TerrainSprites>,
+) {
+    commands
+        .spawn((
+            SpriteSheetBundle {
+                transform: Transform::from_translation(Vec3::NEG_Y * 16.),
+                sprite: TextureAtlasSprite {
+                    custom_size: Some(Vec2::new(168., 16.)),
+                    color: Color::WHITE,
+                    index: TerrainType::GoldStright as usize,
+                    ..Default::default()
+                },
+                texture_atlas: terrain.get_atlas(),
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        HitBox(Vec2::new(200., 5.)),
-    ));
+            HitBox(Vec2::new(200., 16.)),
+        ))
+        .with_children(|p| {
+            p.spawn(SpriteSheetBundle {
+                transform: Transform::from_translation(Vec3::X * 92.),
+                sprite: TextureAtlasSprite {
+                    custom_size: Some(Vec2::new(16., 16.)),
+                    color: Color::WHITE,
+                    index: TerrainType::GoldRightEnd as usize,
+                    ..Default::default()
+                },
+                texture_atlas: terrain.get_atlas(),
+                ..Default::default()
+            });
+            p.spawn(SpriteSheetBundle {
+                transform: Transform::from_translation(Vec3::NEG_X * 92.),
+                sprite: TextureAtlasSprite {
+                    custom_size: Some(Vec2::new(16., 16.)),
+                    color: Color::WHITE,
+                    index: TerrainType::GoldLeftEnd as usize,
+                    ..Default::default()
+                },
+                texture_atlas: terrain.get_atlas(),
+                ..Default::default()
+            });
+        });
     commands.spawn((
-        SpriteBundle {
+        SpriteSheetBundle {
             transform: Transform::from_translation(Vec3::new(100., 25., 0.)),
-            sprite: Sprite {
+            sprite: TextureAtlasSprite {
                 custom_size: Some(Vec2::new(32., 32.)),
                 color: Color::WHITE,
+                index: TerrainType::GoldLeftEnd as usize,
                 ..Default::default()
             },
+            texture_atlas: terrain.get_atlas(),
             ..Default::default()
         },
         HitBox(Vec2::new(32., 32.)),
@@ -48,4 +82,39 @@ pub fn spawn_map(mut commands: Commands, animations: Res<Animations>) {
             Trigger,
         ));
     }
+}
+
+#[derive(Resource)]
+pub struct TerrainSprites(Handle<TextureAtlas>);
+
+impl TerrainSprites {
+    fn new(handle: Handle<TextureAtlas>) -> TerrainSprites {
+        TerrainSprites(handle)
+    }
+    fn get_atlas(&self) -> Handle<TextureAtlas> {
+        self.0.clone()
+    }
+}
+
+impl FromWorld for TerrainSprites {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+        let texture_atles = TextureAtlas::from_grid(
+            asset_server.load("Terrain/Terrain (16x16).png"),
+            Vec2::splat(16.),
+            22,
+            11,
+            None,
+            None,
+        );
+        let mut assets = world.resource_mut::<Assets<TextureAtlas>>();
+        TerrainSprites::new(assets.add(texture_atles))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum TerrainType {
+    GoldLeftEnd = 193,
+    GoldStright = 194,
+    GoldRightEnd = 195,
 }

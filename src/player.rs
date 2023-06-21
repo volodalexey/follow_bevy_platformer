@@ -50,7 +50,7 @@ pub fn spawn_player(mut commands: Commands, animaitons: Res<Animations>) {
         animation,
         FrameTime(0.0),
         Grounded(true),
-        HitBox(Vec2::splat(32.)),
+        HitBox(Vec2::new(18., 32.)),
     ));
 }
 
@@ -143,13 +143,14 @@ pub fn player_fall(
 pub fn player_jump(
     mut commands: Commands,
     mut player: Query<(Entity, &mut Transform, &mut Jump), With<Player>>,
+    input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
     let Ok((player, mut transform,mut jump)) = player.get_single_mut() else {return;};
     let jump_power = (time.delta_seconds() * FALL_SPEED * 2.).min(jump.0);
-    jump.0 -= jump_power;
     transform.translation.y += jump_power;
-    if jump.0 == 0. {
+    jump.0 -= if input.any_pressed([KeyCode::W, KeyCode::Up, KeyCode::Space]) {jump_power} else {jump_power * 2.};
+    if jump.0 <= 0. {
         commands.entity(player).remove::<Jump>();
     }
 }
