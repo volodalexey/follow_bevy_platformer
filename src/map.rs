@@ -5,6 +5,7 @@ use bevy::prelude::{
 
 use crate::{
     animation::{Animation, Animations, FrameTime},
+    collectable::Collectable,
     hit_box::HitBox,
 };
 
@@ -80,6 +81,7 @@ pub fn spawn_map(
             animation,
             FrameTime(0.0),
             Trigger,
+            Collectable,
         ));
     }
 }

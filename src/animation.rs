@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::{
-    AssetServer, Assets, Component, FromWorld, Handle, Query, Res, Resource, TextureAtlas,
+    AssetServer, Assets, Component, FromWorld, Handle, Mut, Query, Res, Resource, TextureAtlas,
     TextureAtlasSprite, Time, Vec2, World,
 };
 
@@ -50,74 +50,93 @@ impl FromWorld for Animations {
         let mut map = Animations {
             map: HashMap::new(),
         };
-        let asset_server = world.resource::<AssetServer>();
-        let idel_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Idle (32x32).png"),
-            Vec2::splat(32.),
-            11,
-            1,
-            None,
-            None,
-        );
-        let run_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Run (32x32).png"),
-            Vec2::splat(32.),
-            12,
-            1,
-            None,
-            None,
-        );
-        let jump_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Jump (32x32).png"),
-            Vec2::splat(32.),
-            1,
-            1,
-            None,
-            None,
-        );
-        let fall_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Fall (32x32).png"),
-            Vec2::splat(32.),
-            1,
-            1,
-            None,
-            None,
-        );
+        world.resource_scope(|world, mut texture_atles: Mut<Assets<TextureAtlas>>| {
+            let asset_server = world.resource::<AssetServer>();
+            let idel_atlas = TextureAtlas::from_grid(
+                asset_server.load("Main Characters/Mask Dude/Idle (32x32).png"),
+                Vec2::splat(32.),
+                11,
+                1,
+                None,
+                None,
+            );
+            map.add(
+                Animation::PlayerIdle,
+                texture_atles.add(idel_atlas),
+                SpriteAnimation {
+                    len: 11,
+                    frame_time: 1. / 20.,
+                },
+            );
 
-        let mut texture_atles = world.resource_mut::<Assets<TextureAtlas>>();
+            let run_atlas = TextureAtlas::from_grid(
+                asset_server.load("Main Characters/Mask Dude/Run (32x32).png"),
+                Vec2::splat(32.),
+                12,
+                1,
+                None,
+                None,
+            );
+            map.add(
+                Animation::PlayerRun,
+                texture_atles.add(run_atlas),
+                SpriteAnimation {
+                    len: 12,
+                    frame_time: 1. / 20.,
+                },
+            );
 
-        map.add(
-            Animation::PlayerIdle,
-            texture_atles.add(idel_atlas),
-            SpriteAnimation {
-                len: 11,
-                frame_time: 1. / 10.,
-            },
-        );
-        map.add(
-            Animation::PlayerRun,
-            texture_atles.add(run_atlas),
-            SpriteAnimation {
-                len: 12,
-                frame_time: 1. / 10.,
-            },
-        );
-        map.add(
-            Animation::PlayerJump,
-            texture_atles.add(jump_atlas),
-            SpriteAnimation {
-                len: 1,
-                frame_time: 1.,
-            },
-        );
-        map.add(
-            Animation::PlayerFall,
-            texture_atles.add(fall_atlas),
-            SpriteAnimation {
-                len: 1,
-                frame_time: 1.,
-            },
-        );
+            let jump_atlas = TextureAtlas::from_grid(
+                asset_server.load("Main Characters/Mask Dude/Jump (32x32).png"),
+                Vec2::splat(32.),
+                1,
+                1,
+                None,
+                None,
+            );
+            map.add(
+                Animation::PlayerJump,
+                texture_atles.add(jump_atlas),
+                SpriteAnimation {
+                    len: 1,
+                    frame_time: 1.,
+                },
+            );
+
+            let fall_atlas = TextureAtlas::from_grid(
+                asset_server.load("Main Characters/Mask Dude/Fall (32x32).png"),
+                Vec2::splat(32.),
+                1,
+                1,
+                None,
+                None,
+            );
+            map.add(
+                Animation::PlayerFall,
+                texture_atles.add(fall_atlas),
+                SpriteAnimation {
+                    len: 1,
+                    frame_time: 1.,
+                },
+            );
+
+            let strawberry_atlas = TextureAtlas::from_grid(
+                asset_server.load("Items/Fruits/Strawberry.png"),
+                Vec2::splat(32.),
+                17,
+                1,
+                None,
+                None,
+            );
+            map.add(
+                Animation::Strawberry,
+                texture_atles.add(strawberry_atlas),
+                SpriteAnimation {
+                    len: 17,
+                    frame_time: 1. / 20.,
+                },
+            );
+        });
 
         map
     }
