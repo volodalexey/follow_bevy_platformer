@@ -20,7 +20,7 @@ pub fn spawn_map(
     commands
         .spawn((
             SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::NEG_Y * 16.),
+                transform: Transform::from_translation(Vec3::NEG_Y * 32.),
                 sprite: TextureAtlasSprite {
                     custom_size: Some(Vec2::new(168., 16.)),
                     color: Color::WHITE,
@@ -58,7 +58,7 @@ pub fn spawn_map(
         });
     commands.spawn((
         SpriteSheetBundle {
-            transform: Transform::from_translation(Vec3::new(100., 25., 0.)),
+            transform: Transform::from_translation(Vec3::new(110., 20., 0.)),
             sprite: TextureAtlasSprite {
                 custom_size: Some(Vec2::new(32., 32.)),
                 color: Color::WHITE,
@@ -77,7 +77,7 @@ pub fn spawn_map(
                 texture_atlas,
                 ..Default::default()
             },
-            HitBox(Vec2::new(32., 32.)),
+            HitBox(Vec2::new(16., 16.)),
             animation,
             FrameTime(0.0),
             Trigger,

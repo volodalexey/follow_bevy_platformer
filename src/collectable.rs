@@ -1,4 +1,5 @@
-use bevy::prelude::{Commands, Component, Entity, Query, Transform, With, Without};
+use bevy::prelude::{Component, Query, Transform, With, Without};
+use rand::Rng;
 
 use crate::hit_box::{check_hit, HitBox};
 use crate::player::Player;
@@ -8,18 +9,18 @@ pub struct Collectable;
 
 pub fn get_collectable(
     player: Query<(&Transform, &HitBox), With<Player>>,
-    triggers: Query<(Entity, &Transform, &HitBox), (With<Collectable>, Without<Player>)>,
-    mut commands: Commands,
+    mut triggers: Query<(&mut Transform, &HitBox), (With<Collectable>, Without<Player>)>,
 ) {
     let (p_transform, &p_hitbox) = player.single();
-    for (entity, t_transform, &t_hitbox) in &triggers {
+    for (mut t_transform, &t_hitbox) in &mut triggers {
         if check_hit(
             p_hitbox,
             p_transform.translation,
             t_hitbox,
             t_transform.translation,
         ) {
-            commands.entity(entity).despawn();
+            t_transform.translation.x = rand::thread_rng().gen_range(-100.0..100.);
+            t_transform.translation.y = rand::thread_rng().gen_range(-10.0..75.);
         }
     }
 }
