@@ -1,72 +1,17 @@
-use std::collections::HashMap;
 
 use bevy::prelude::{
-    error, Commands, Component, Entity, Handle, Input, KeyCode, Query, Res, Resource,
+    error, Commands, Component, Entity, Handle, Input, KeyCode, Query, Res, 
     SpriteSheetBundle, TextureAtlas, TextureAtlasSprite, Time, Transform, Vec2, Vec3, With,
-    Without, FromWorld, World, AssetServer, Assets, Local
+    Without, Local
 };
 
 use crate::{
-    animation::{FrameTime, SpriteAnimation},
-    hit_box::{check_hit, HitBox},
+    animation::{FrameTime, SpriteAnimation, Animations, Animation},
+    hit_box::{check_hit, HitBox}, map::Trigger,
 };
 
 #[derive(Component)]
 pub struct Player;
-
-#[derive(Resource)]
-pub struct PlayerAnimations {
-    pub map: HashMap<Animation, (Handle<TextureAtlas>, SpriteAnimation)>,
-}
-
-impl FromWorld for PlayerAnimations {
-    fn from_world(world: &mut World) -> Self {
-        let mut map = PlayerAnimations {map: HashMap::new()};
-        let asset_server = world.resource::<AssetServer>();
-        let idel_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Idle (32x32).png"),
-            Vec2::splat(32.),
-            11, 1, None, None);
-        let run_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Run (32x32).png"),
-            Vec2::splat(32.),
-            12, 1, None, None);
-        let jump_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Jump (32x32).png"),
-            Vec2::splat(32.),
-            1, 1, None, None);
-        let fall_atlas = TextureAtlas::from_grid(
-            asset_server.load("Main Characters/Mask Dude/Fall (32x32).png"),
-            Vec2::splat(32.),
-            1, 1, None, None);
-        
-        let mut texture_atles = world.resource_mut::<Assets<TextureAtlas>>();
-        
-        map.add(Animation::Idle, texture_atles.add(idel_atlas), SpriteAnimation { len: 11, frame_time: 1./10. });
-        map.add(Animation::Run, texture_atles.add(run_atlas), SpriteAnimation { len: 12, frame_time: 1./10. });
-        map.add(Animation::Jump, texture_atles.add(jump_atlas), SpriteAnimation { len: 1, frame_time: 1. });
-        map.add(Animation::Fall, texture_atles.add(fall_atlas), SpriteAnimation { len: 1, frame_time: 1. });
-
-        map
-    }
-}
-
-impl PlayerAnimations {
-    fn add(&mut self, id: Animation, handle: Handle<TextureAtlas>, animation: SpriteAnimation) {
-        self.map.insert(id, (handle, animation));
-    }
-    fn get(&self, id: Animation) -> Option<(Handle<TextureAtlas>, SpriteAnimation)> {
-        self.map.get(&id).cloned()
-    }
-}
-
-#[derive(Debug, Hash, PartialEq, Eq)]
-pub enum Animation {
-    Run,
-    Idle,
-    Jump,
-    Fall,
-}
 
 #[derive(Component)]
 pub struct Grounded(bool);
@@ -75,7 +20,7 @@ pub fn ground_detection(
     mut player: Query<(&Transform, &mut Grounded), With<Player>>,
     mut last: Local<Transform>,
 ) {
-    let (pos,mut on_ground) = player.single_mut();
+    let (pos,mut is_grounded) = player.single_mut();
 
     let current = if pos.translation.y == last.translation.y {
         true
@@ -83,15 +28,15 @@ pub fn ground_detection(
         false
     };
 
-    if current != on_ground.0 {
-        on_ground.0 = current;
+    if current != is_grounded.0 {
+        is_grounded.0 = current;
     }
 
     *last = *pos;
 }
 
-pub fn spawn_player(mut commands: Commands, animaitons: Res<PlayerAnimations>) {
-    let Some((texture_atlas, animation)) = animaitons.get(Animation::Idle) else {error!("Failed to find animation: Idle"); return;};
+pub fn spawn_player(mut commands: Commands, animaitons: Res<Animations>) {
+    let Some((texture_atlas, animation)) = animaitons.get(Animation::PlayerIdle) else {error!("Failed to find animation: Idle"); return;};
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas,
@@ -117,7 +62,7 @@ const MOVE_SPEED: f32 = 100.;
 pub fn move_player(
     mut commands: Commands,
     mut player: Query<(Entity, &mut Transform, &Grounded, &HitBox), With<Player>>,
-    hitboxs: Query<(&HitBox, &Transform), Without<Player>>,
+    hitboxs: Query<(&HitBox, &Transform), (Without<Player>, Without<Trigger>)>,
     time: Res<Time>,
     input: Res<Input<KeyCode>>,
 ) {
@@ -145,7 +90,7 @@ pub fn change_player_animation(
     mut player: Query<(&mut Handle<TextureAtlas>, &mut SpriteAnimation, &mut TextureAtlasSprite), With<Player>>,
     player_jump: Query<(Option<&Jump>, &Grounded), With<Player>>,
     input: Res<Input<KeyCode>>,
-    animaitons: Res<PlayerAnimations>,
+    animaitons: Res<Animations>,
 ) {
     let (mut atlas, mut animation, mut sprite) = player.single_mut();
     let (jump, grounded) = player_jump.single();
@@ -163,15 +108,15 @@ pub fn change_player_animation(
     let set = 
     //Jumping if jump
     if jump.is_some() {
-        Animation::Jump
+        Animation::PlayerJump
     //Falling if no on ground
     } else if !grounded.0 {
-        Animation::Fall
+        Animation::PlayerFall
     // if any move keys pressed set run sprite
     } else if input.any_pressed([KeyCode::A, KeyCode::Left, KeyCode::D, KeyCode::Right]) {
-        Animation::Run
+        Animation::PlayerRun
     } else {
-        Animation::Idle
+        Animation::PlayerIdle
     };
 
     let Some((new_atlas, new_animaiton)) = animaitons.get(set) else {error!("No Animation Jump Loaded"); return;};
@@ -184,7 +129,7 @@ const FALL_SPEED: f32 = 98.0;
 
 pub fn player_fall(
     mut player: Query<(&mut Transform, &HitBox), (With<Player>, Without<Jump>)>,
-    hitboxs: Query<(&HitBox, &Transform), Without<Player>>,
+    hitboxs: Query<(&HitBox, &Transform), (Without<Player>, Without<Trigger>)>,
     time: Res<Time>,
 ) {
     let Ok((mut p_offset, &p_hitbox)) = player.get_single_mut() else {return;};
