@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    error, Commands, Component, Entity, Local, Query, Res, SpriteSheetBundle, TextureAtlasSprite,
-    Time, Transform, Vec2, Vec3, With, Without,
+    error, App, Commands, Component, Entity, Local, Plugin, Query, Res, SpriteSheetBundle,
+    TextureAtlasSprite, Time, Transform, Vec2, Vec3, With, Without,
 };
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 
@@ -10,6 +10,19 @@ use crate::{
     map::Trigger,
     user_input::PlayerInput,
 };
+
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_startup_system(spawn_player)
+            .add_system(move_player)
+            .add_system(player_fall)
+            .add_system(player_jump)
+            .add_system(doubble_jump)
+            .add_system(ground_detection);
+    }
+}
 
 #[derive(Component)]
 pub struct Player;
@@ -58,11 +71,12 @@ pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
             input_map: PlayerInput::player_one(),
             ..Default::default()
         },
+        Jump(0., false),
     ));
 }
 
 #[derive(Component)]
-pub struct Jump(f32);
+pub struct Jump(pub f32, pub bool);
 
 const MOVE_SPEED: f32 = 100.;
 
@@ -83,7 +97,7 @@ pub fn move_player(
 ) {
     let (entity, mut p_offset, grounded, &p_hitbox, input) = player.single_mut();
     let delat = if input.just_pressed(PlayerInput::Jump) && grounded.0 {
-        commands.entity(entity).insert(Jump(100.));
+        commands.entity(entity).insert(Jump(100., true));
         return;
     } else if input.pressed(PlayerInput::Left) {
         -MOVE_SPEED * time.delta_seconds() * (0.5 + (grounded.0 as u16) as f32)
@@ -104,14 +118,18 @@ pub fn move_player(
 const FALL_SPEED: f32 = 98.0;
 
 pub fn player_fall(
-    mut player: Query<(&mut Transform, &HitBox), (With<Player>, Without<Jump>)>,
+    mut player: Query<(&mut Transform, &HitBox, &mut Jump), With<Player>>,
     hitboxs: Query<(&HitBox, &Transform), (Without<Player>, Without<Trigger>)>,
     time: Res<Time>,
 ) {
-    let Ok((mut p_offset, &p_hitbox)) = player.get_single_mut() else {return;};
+    let (mut p_offset, &p_hitbox, mut jump) = player.single_mut();
+    if jump.0 > 0. {
+        return;
+    }
     let new_pos = p_offset.translation - Vec3::Y * FALL_SPEED * time.delta_seconds();
     for (&hitbox, offset) in &hitboxs {
         if check_hit(p_hitbox, new_pos, hitbox, offset.translation) {
+            jump.1 = true;
             return;
         }
     }
@@ -119,19 +137,26 @@ pub fn player_fall(
 }
 
 pub fn player_jump(
-    mut commands: Commands,
-    mut player: Query<(Entity, &mut Transform, &mut Jump, &ActionState<PlayerInput>), With<Player>>,
+    mut player: Query<(&mut Transform, &mut Jump, &ActionState<PlayerInput>), With<Player>>,
     time: Res<Time>,
 ) {
-    let Ok((player, mut transform,mut jump, input)) = player.get_single_mut() else {return;};
+    let (mut transform, mut jump, input) = player.single_mut();
+    if jump.0 <= 0. {
+        return;
+    }
     let jump_power = (time.delta_seconds() * FALL_SPEED * 2.).min(jump.0);
     transform.translation.y += jump_power;
-    jump.0 -= if input.pressed(PlayerInput::Jump) {
-        jump_power
+    jump.0 -= if input.pressed(PlayerInput::Fall) {
+        jump.0
     } else {
-        jump_power * 2.
+        jump_power
     };
-    if jump.0 <= 0. {
-        commands.entity(player).remove::<Jump>();
+}
+
+pub fn doubble_jump(mut player: Query<(&mut Jump, &ActionState<PlayerInput>), With<Player>>) {
+    let (mut jump, input) = player.single_mut();
+    if input.just_pressed(PlayerInput::Jump) && jump.1 {
+        jump.0 = 100.;
+        jump.1 = false;
     }
 }

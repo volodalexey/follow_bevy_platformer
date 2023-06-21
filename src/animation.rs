@@ -23,6 +23,7 @@ pub enum Animation {
     PlayerRun,
     PlayerIdle,
     PlayerJump,
+    PlayerDubbleJump,
     PlayerFall,
     Strawberry,
 }
@@ -93,6 +94,12 @@ impl FromWorld for Animations {
                 1, 1, None, None);
             map.add(Animation::PlayerJump, texture_atles.add(jump_atlas), SpriteAnimation::new(1, 1));
 
+            let djump_atlas = TextureAtlas::from_grid(
+                asset_server.load("Main Characters/Mask Dude/Double Jump (32x32).png"),
+                Vec2::splat(32.),
+                6, 1, None, None);
+            map.add(Animation::PlayerDubbleJump, texture_atles.add(djump_atlas), SpriteAnimation::new(6,20));
+
             let fall_atlas = TextureAtlas::from_grid(
                 asset_server.load("Main Characters/Mask Dude/Fall (32x32).png"),
                 Vec2::splat(32.),
@@ -120,12 +127,10 @@ impl Animations {
 }
 
 pub fn change_player_animation(
-    mut player: Query<(&mut Handle<TextureAtlas>, &mut SpriteAnimation, &mut TextureAtlasSprite, &ActionState<PlayerInput>), With<Player>>,
-    player_jump: Query<(Option<&Jump>, &Grounded), With<Player>>,
+    mut player: Query<(&mut Handle<TextureAtlas>, &mut SpriteAnimation, &mut TextureAtlasSprite, &ActionState<PlayerInput>, &Jump, &Grounded), With<Player>>,
     animaitons: Res<Animations>,
 ) {
-    let (mut atlas, mut animation, mut sprite, input) = player.single_mut();
-    let (jump, grounded) = player_jump.single();
+    let (mut atlas, mut animation, mut sprite, input, jump, grounded) = player.single_mut();
     if input.just_pressed(PlayerInput::Left) {
         sprite.flip_x = true;
     } else if input.just_pressed(PlayerInput::Right)
@@ -138,8 +143,12 @@ pub fn change_player_animation(
     
     let set = 
     //Jumping if jump
-    if jump.is_some() {
-        Animation::PlayerJump
+    if jump.0 > 0.0 {
+        if jump.1 {
+            Animation::PlayerJump
+        } else {
+            Animation::PlayerDubbleJump
+        }
     //Falling if no on ground
     } else if !grounded.0 {
         Animation::PlayerFall

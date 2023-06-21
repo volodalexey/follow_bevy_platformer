@@ -20,7 +20,7 @@ pub fn get_collectable(
             t_transform.translation,
         ) {
             t_transform.translation.x = rand::thread_rng().gen_range(-100.0..100.);
-            t_transform.translation.y = rand::thread_rng().gen_range(-10.0..75.);
+            t_transform.translation.y = rand::thread_rng().gen_range(-10.0..150.);
         }
     }
 }

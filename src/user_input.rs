@@ -6,6 +6,7 @@ pub enum PlayerInput {
     Left,
     Right,
     Jump,
+    Fall,
 }
 
 impl PlayerInput {
@@ -19,6 +20,8 @@ impl PlayerInput {
             (KeyCode::W, PlayerInput::Jump),
             (KeyCode::Space, PlayerInput::Jump),
             (KeyCode::Up, PlayerInput::Jump),
+            (KeyCode::S, PlayerInput::Fall),
+            (KeyCode::Down, PlayerInput::Fall),
         ]);
         map
     }
