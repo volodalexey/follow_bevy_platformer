@@ -50,14 +50,14 @@ impl FromWorld for TerrainSprites {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub enum TerrainMaterial {
     Gold = 193,
     Brick = 105,
     Copper = 188,
     Iron = 100,
-    Clay = 22,
+    Clay = 12,
 }
 
 pub enum TerrainType {
@@ -118,8 +118,7 @@ impl MapObject for MapBox {
             }
             (1, size_y) => {
                 let offset_x = self.offset.x as f32 * 16.;
-                let offset_y =
-                    (self.offset.y as f32 + (size_y as f32 / 2.)) * 16. - (size_y % 2 * 8) as f32;
+                let offset_y = (self.offset.y as f32 + (size_y as f32 / 2.)) * 16. - 8.;
                 commands
                     .spawn((
                         SpatialBundle {
@@ -166,8 +165,7 @@ impl MapObject for MapBox {
                     });
             }
             (size_x, 1) => {
-                let offset_x =
-                    (self.offset.x as f32 + (size_x as f32 / 2.)) * 16. - (size_x % 2 * 8) as f32;
+                let offset_x = (self.offset.x as f32 + (size_x as f32 / 2.)) * 16. - 8.;
                 let offset_y = self.offset.y as f32 * 16.;
                 commands
                     .spawn((
@@ -215,8 +213,8 @@ impl MapObject for MapBox {
                     });
             }
             (2, 2) => {
-                let offset_x = (self.offset.x + 1) as f32 * 16.;
-                let offset_y = (self.offset.y + 1) as f32 * 16.;
+                let offset_x = (self.offset.x + 1) as f32 * 16. - 8.;
+                let offset_y = (self.offset.y + 1) as f32 * 16. - 8.;
                 commands
                     .spawn((
                         SpatialBundle {

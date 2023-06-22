@@ -1,7 +1,8 @@
 use bevy::{
     prelude::{
-        error, App, Commands, Component, CoreSet, Input, IntoSystemConfig, KeyCode, Name, Plugin,
-        Query, Res, ResMut, Resource, Transform, Vec3, With,
+        error, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, Input,
+        IntoSystemConfig, KeyCode, Name, Plugin, Query, Res, ResMut, Resource, Transform, Vec3,
+        With,
     },
     sprite::{SpriteSheetBundle, TextureAtlasSprite},
 };
@@ -29,7 +30,9 @@ impl Plugin for GhostPlugin {
             .add_system(save_player_offset.in_base_set(CoreSet::Last))
             .add_system(update_ghost.before(PlayerStages::Move))
             .add_system(drift_correct.in_base_set(CoreSet::Last))
-            .add_system(test_ghost);
+            .add_system(test_ghost)
+            .add_event::<GhostEvents>()
+            .add_system(handle_ghost_event);
     }
 }
 
@@ -111,42 +114,13 @@ fn update_ghost(
     }
 }
 
-fn test_ghost(input: Res<Input<KeyCode>>, mut commands: Commands, animations: Res<Animations>) {
+fn test_ghost(input: Res<Input<KeyCode>>, mut events: EventWriter<GhostEvents>) {
     if input.just_pressed(KeyCode::Escape) {
-        let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
-        commands.spawn((
-            (
-                SpriteSheetBundle {
-                    texture_atlas,
-                    sprite: TextureAtlasSprite {
-                        index: 0,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                Player::Mask,
-                PhoxAnimationBundle::new(animation),
-                Grounded(true),
-                GroundedCheck::default(),
-                ActionState::<PlayerInput>::default(),
-                Jump(false),
-                RigidBody::Dynamic,
-                Velocity::default(),
-                Collider::cuboid(9., 16.),
-                LockedAxes::ROTATION_LOCKED_Z,
-                Friction {
-                    coefficient: 5.,
-                    combine_rule: CoefficientCombineRule::Multiply,
-                },
-                Damping {
-                    linear_damping: 1.,
-                    angular_damping: 1.,
-                },
-                Name::new("Ghost"),
-                Ghost(0),
-            ),
-            CollisionGroups::new(Group::GROUP_2, Group::GROUP_1),
-        ));
+        events.send(GhostEvents::SpawnGhost);
+    }
+    if input.just_pressed(KeyCode::F5) {
+        events.send(GhostEvents::ClearGhosts);
+        events.send(GhostEvents::ClearTrail);
     }
 }
 
@@ -162,4 +136,71 @@ fn drift_correct(mut query: Query<(&Ghost, &mut Transform)>, offsets: Res<SyncOf
         let Some(offset) = offsets.get_offset((frame - 1) / SYNCFRAME) else {error!("No Sync for frame {}", frame); continue;};
         transform.translation = *offset;
     }
+}
+
+fn handle_ghost_event(
+    mut events: EventReader<GhostEvents>,
+    mut frame: ResMut<PlayerFrame>,
+    mut inputs: ResMut<PlayerInputs>,
+    mut offsets: ResMut<SyncOffset>,
+    mut commands: Commands,
+    ghosts: Query<Entity, With<Ghost>>,
+    animations: Res<Animations>,
+) {
+    for event in events.iter() {
+        match event {
+            GhostEvents::ClearTrail => {
+                frame.0 = 1;
+                inputs.0.clear();
+                offsets.0.clear();
+            }
+            GhostEvents::ClearGhosts => {
+                for ghost in &ghosts {
+                    commands.entity(ghost).despawn();
+                }
+            }
+            GhostEvents::SpawnGhost => {
+                let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
+                commands.spawn((
+                    (
+                        SpriteSheetBundle {
+                            texture_atlas,
+                            sprite: TextureAtlasSprite {
+                                index: 0,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        Player::Mask,
+                        PhoxAnimationBundle::new(animation),
+                        Grounded(true),
+                        GroundedCheck::default(),
+                        ActionState::<PlayerInput>::default(),
+                        Jump(false),
+                        RigidBody::Dynamic,
+                        Velocity::default(),
+                        Collider::cuboid(9., 16.),
+                        LockedAxes::ROTATION_LOCKED_Z,
+                        Friction {
+                            coefficient: 5.,
+                            combine_rule: CoefficientCombineRule::Multiply,
+                        },
+                        Damping {
+                            linear_damping: 1.,
+                            angular_damping: 1.,
+                        },
+                        Name::new("Ghost"),
+                        Ghost(0),
+                    ),
+                    CollisionGroups::new(Group::GROUP_2, Group::GROUP_1),
+                ));
+            }
+        }
+    }
+}
+
+pub enum GhostEvents {
+    ClearTrail,
+    ClearGhosts,
+    SpawnGhost,
 }
