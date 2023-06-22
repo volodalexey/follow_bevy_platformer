@@ -1,16 +1,13 @@
 use bevy::prelude::{
-    AssetServer, Assets, BuildChildren, Color, Commands, Component, FromWorld, Handle, Res,
-    Resource, SpriteSheetBundle, TextureAtlas, TextureAtlasSprite, Transform, Vec2, Vec3, World,
+    AssetServer, Assets, BuildChildren, Color, Commands, FromWorld, Handle, Res, Resource,
+    SpriteSheetBundle, TextureAtlas, TextureAtlasSprite, Transform, Vec2, Vec3, World,
 };
+use bevy_rapier2d::prelude::{Collider, RigidBody, Sensor};
 
 use crate::{
     animation::{Animation, Animations, FrameTime},
     collectable::Collectable,
-    hit_box::HitBox,
 };
-
-#[derive(Component)]
-pub struct Trigger;
 
 pub fn spawn_map(
     mut commands: Commands,
@@ -30,7 +27,8 @@ pub fn spawn_map(
                 texture_atlas: terrain.get_atlas(),
                 ..Default::default()
             },
-            HitBox(Vec2::new(200., 16.)),
+            RigidBody::Fixed,
+            Collider::cuboid(100., 8.),
         ))
         .with_children(|p| {
             p.spawn(SpriteSheetBundle {
@@ -68,7 +66,8 @@ pub fn spawn_map(
             texture_atlas: terrain.get_atlas(),
             ..Default::default()
         },
-        HitBox(Vec2::new(32., 32.)),
+        RigidBody::Fixed,
+        Collider::cuboid(16., 16.),
     ));
     if let Some((texture_atlas, animation)) = animations.get(Animation::Strawberry) {
         commands.spawn((
@@ -77,10 +76,11 @@ pub fn spawn_map(
                 texture_atlas,
                 ..Default::default()
             },
-            HitBox(Vec2::new(16., 16.)),
             animation,
             FrameTime(0.0),
-            Trigger,
+            RigidBody::Fixed,
+            Collider::ball(8.),
+            Sensor,
             Collectable,
         ));
     }

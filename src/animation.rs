@@ -4,9 +4,9 @@ use bevy::prelude::{
     App, AssetServer, Assets, Component, FromWorld, Handle, Mut, Plugin, Query, Res, Resource,
     TextureAtlas, TextureAtlasSprite, Time, Vec2, World, With, error, Bundle
 };
-use leafwing_input_manager::prelude::ActionState;
+use bevy_rapier2d::prelude::Velocity;
 
-use crate::{player::{Jump, Grounded, Player}, user_input::PlayerInput};
+use crate::player::{Jump, Player};
 
 pub struct PhoxAnimationPlugin;
 
@@ -127,33 +127,29 @@ impl Animations {
 }
 
 pub fn change_player_animation(
-    mut player: Query<(&mut Handle<TextureAtlas>, &mut SpriteAnimation, &mut TextureAtlasSprite, &ActionState<PlayerInput>, &Jump, &Grounded), With<Player>>,
+    mut player: Query<(&mut Handle<TextureAtlas>, &mut SpriteAnimation, &mut TextureAtlasSprite, &Jump, &Velocity), With<Player>>,
     animaitons: Res<Animations>,
 ) {
-    let (mut atlas, mut animation, mut sprite, input, jump, grounded) = player.single_mut();
-    if input.just_pressed(PlayerInput::Left) {
+    let (mut atlas, mut animation, mut sprite, jump, velocity) = player.single_mut();
+    if velocity.linvel.x < 0. {
         sprite.flip_x = true;
-    } else if input.just_pressed(PlayerInput::Right)
-    && !input.pressed(PlayerInput::Left) {
-        sprite.flip_x = false;
-    } else if input.just_released(PlayerInput::Left)
-    && input.pressed(PlayerInput::Right) {
+    } else if velocity.linvel.x > 0.0 {
         sprite.flip_x = false;
     }
     
     let set = 
     //Jumping if jump
-    if jump.0 > 0.0 {
-        if jump.1 {
+    if velocity.linvel.y > 0.01 {
+        if jump.0 {
             Animation::PlayerJump
         } else {
             Animation::PlayerDubbleJump
         }
     //Falling if no on ground
-    } else if !grounded.0 {
+    } else if velocity.linvel.y < -0.01 {
         Animation::PlayerFall
     // if any move keys pressed set run sprite
-    } else if input.pressed(PlayerInput::Left) || input.pressed(PlayerInput::Right) {
+    } else if velocity.linvel.x != 0.0 {
         Animation::PlayerRun
     } else {
         Animation::PlayerIdle

@@ -1,26 +1,34 @@
-use bevy::prelude::{Component, Query, Transform, With, Without};
+use bevy::prelude::{Component, Entity, Query, Res, Transform, With};
+use bevy_rapier2d::prelude::RapierContext;
 use rand::Rng;
 
-use crate::hit_box::{check_hit, HitBox};
 use crate::player::Player;
 
 #[derive(Component)]
 pub struct Collectable;
 
 pub fn get_collectable(
-    player: Query<(&Transform, &HitBox), With<Player>>,
-    mut triggers: Query<(&mut Transform, &HitBox), (With<Collectable>, Without<Player>)>,
+    player: Query<Entity, With<Player>>,
+    mut collectables: Query<&mut Transform, With<Collectable>>,
+    rapier_context: Res<RapierContext>,
 ) {
-    let (p_transform, &p_hitbox) = player.single();
-    for (mut t_transform, &t_hitbox) in &mut triggers {
-        if check_hit(
-            p_hitbox,
-            p_transform.translation,
-            t_hitbox,
-            t_transform.translation,
-        ) {
-            t_transform.translation.x = rand::thread_rng().gen_range(-100.0..100.);
-            t_transform.translation.y = rand::thread_rng().gen_range(-10.0..150.);
+    let entity = player.single();
+
+    /* Iterate through all the intersection pairs involving a specific collider. */
+    for (collider1, collider2, intersecting) in rapier_context.intersections_with(entity) {
+        if intersecting {
+            println!(
+                "The entities {:?} and {:?} have intersecting colliders!",
+                collider1, collider2
+            );
+            if let Ok(mut pos) = collectables.get_mut(collider2) {
+                pos.translation.x = rand::thread_rng().gen_range(-100.0..100.);
+                pos.translation.y = rand::thread_rng().gen_range(-10.0..150.);
+            }
+            if let Ok(mut pos) = collectables.get_mut(collider1) {
+                pos.translation.x = rand::thread_rng().gen_range(-100.0..100.);
+                pos.translation.y = rand::thread_rng().gen_range(-10.0..150.);
+            }
         }
     }
 }

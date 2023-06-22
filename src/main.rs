@@ -1,7 +1,6 @@
 mod animation;
 mod camera;
 mod collectable;
-mod hit_box;
 mod map;
 mod player;
 mod user_input;
