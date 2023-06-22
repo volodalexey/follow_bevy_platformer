@@ -2,6 +2,7 @@ mod animation;
 mod camera;
 mod collectable;
 mod ghost;
+mod loader;
 mod map;
 mod player;
 mod tile_map;

@@ -1,6 +1,6 @@
 use bevy::{
     prelude::{
-        error, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, Input,
+        error, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, Handle, Input,
         IntoSystemConfig, KeyCode, Name, Plugin, Query, Res, ResMut, Resource, Transform, Vec3,
         With,
     },
@@ -13,7 +13,7 @@ use bevy_rapier2d::prelude::{
 use leafwing_input_manager::prelude::ActionState;
 
 use crate::{
-    animation::{Animation, Animations, PhoxAnimationBundle},
+    animation::{Animation, Animations},
     player::{Grounded, GroundedCheck, Jump, Player, PlayerStages, RealPlayer},
     user_input::PlayerInput,
     Score,
@@ -162,11 +162,11 @@ fn handle_ghost_event(
                 }
             }
             GhostEvents::SpawnGhost => {
-                let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
+                let Some(handle) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
                 commands.spawn((
                     (
                         SpriteSheetBundle {
-                            texture_atlas,
+                            texture_atlas: Handle::default(),
                             sprite: TextureAtlasSprite {
                                 index: 0,
                                 ..Default::default()
@@ -174,7 +174,7 @@ fn handle_ghost_event(
                             ..Default::default()
                         },
                         Player::Mask,
-                        PhoxAnimationBundle::new(animation),
+                        handle,
                         Grounded(true),
                         GroundedCheck::default(),
                         ActionState::<PlayerInput>::default(),

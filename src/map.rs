@@ -1,8 +1,10 @@
-use bevy::prelude::{Commands, EventWriter, IVec3, Res, SpriteSheetBundle, Transform, Vec3};
+use bevy::prelude::{
+    default, Commands, EventWriter, IVec3, Res, SpriteSheetBundle, Transform, Vec3,
+};
 use bevy_rapier2d::prelude::{Collider, RigidBody, Sensor};
 
 use crate::{
-    animation::{Animation, Animations, PhoxAnimationBundle},
+    animation::{Animation, Animations},
     collectable::Collectable,
     tile_map::{MapBox, MapEvent, TerrainMaterial},
 };
@@ -97,14 +99,14 @@ pub fn spawn_map(
         material: TerrainMaterial::Iron,
     })));
 
-    if let Some((texture_atlas, animation)) = animations.get(Animation::Strawberry) {
+    if let Some(handle) = animations.get(Animation::Strawberry) {
         commands.spawn((
             SpriteSheetBundle {
                 transform: Transform::from_translation(Vec3::new(32., 16., 0.)),
-                texture_atlas,
+                texture_atlas: default(),
                 ..Default::default()
             },
-            PhoxAnimationBundle::new(animation),
+            handle,
             RigidBody::Fixed,
             Collider::ball(8.),
             Sensor,

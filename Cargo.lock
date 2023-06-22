@@ -655,6 +655,8 @@ dependencies = [
  "bevy_rapier2d",
  "leafwing-input-manager",
  "rand",
+ "ron",
+ "serde",
 ]
 
 [[package]]

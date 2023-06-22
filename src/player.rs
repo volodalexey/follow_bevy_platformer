@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        error, App, Changed, Commands, Component, Entity, IntoSystemConfig, Name, Plugin, Query,
-        Res, SpriteSheetBundle, SystemSet, TextureAtlasSprite, Transform, Vec2,
+        default, error, App, Changed, Commands, Component, Entity, IntoSystemConfig, Name, Plugin,
+        Query, Res, SpriteSheetBundle, SystemSet, TextureAtlasSprite, Transform, Vec2,
     },
     reflect::Reflect,
 };
@@ -12,7 +12,7 @@ use bevy_rapier2d::prelude::{
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 
 use crate::{
-    animation::{Animation, Animations, PhoxAnimationBundle},
+    animation::{Animation, Animations},
     user_input::PlayerInput,
 };
 
@@ -49,10 +49,10 @@ pub enum Player {
 pub struct RealPlayer;
 
 fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
-    let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
+    let Some(handle) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
     commands.spawn((
         SpriteSheetBundle {
-            texture_atlas,
+            texture_atlas: default(),
             sprite: TextureAtlasSprite {
                 index: 0,
                 ..Default::default()
@@ -61,7 +61,7 @@ fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
         },
         Player::Mask,
         RealPlayer,
-        PhoxAnimationBundle::new(animation),
+        handle,
         Grounded(true),
         GroundedCheck(0.0, 0),
         InputManagerBundle {
