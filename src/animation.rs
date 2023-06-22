@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use bevy::prelude::{
-    error, App, AssetServer, Assets, Bundle, Component, FromWorld, Handle, Mut, Plugin, Query, Res,
-    Resource, TextureAtlas, TextureAtlasSprite, Time, Vec2, World,
+use bevy::{
+    prelude::{
+        error, App, AssetServer, Assets, Bundle, Component, FromWorld, Handle, Mut, Plugin, Query,
+        Res, Resource, TextureAtlas, TextureAtlasSprite, Time, Vec2, World,
+    },
+    time::{Timer, TimerMode},
 };
 use bevy_rapier2d::prelude::Velocity;
 
@@ -34,19 +37,35 @@ impl SpriteAnimation {
 }
 
 #[derive(Component)]
-pub struct FrameTime(pub f32);
+pub struct FrameTime(pub Timer);
+
+#[allow(dead_code)]
+impl FrameTime {
+    fn tick(&mut self, delta: std::time::Duration) {
+        self.0.tick(delta);
+    }
+    fn finished(&self) -> bool {
+        self.0.finished()
+    }
+    fn frames(&self) -> usize {
+        self.0.times_finished_this_tick() as usize
+    }
+}
 
 #[derive(Bundle)]
 pub struct PhoxAnimationBundle {
-    pub animation: SpriteAnimation,
+    pub animaiton: SpriteAnimation,
     frame_time: FrameTime,
 }
 
 impl PhoxAnimationBundle {
     pub fn new(animation: SpriteAnimation) -> PhoxAnimationBundle {
         PhoxAnimationBundle {
-            animation,
-            frame_time: FrameTime(0.0),
+            animaiton: animation,
+            frame_time: FrameTime(Timer::new(
+                std::time::Duration::from_secs_f32(animation.frame_time),
+                TimerMode::Repeating,
+            )),
         }
     }
 }
@@ -56,14 +75,10 @@ fn animate_sprite(
     time: Res<Time>,
 ) {
     for (mut sprite, animation, mut frame_time) in animations.iter_mut() {
-        frame_time.0 += time.delta_seconds();
-        if frame_time.0 > animation.frame_time {
-            let frames = (frame_time.0 / animation.frame_time) as usize;
-            sprite.index += frames;
-            if sprite.index >= animation.len {
-                sprite.index %= animation.len;
-            }
-            frame_time.0 -= animation.frame_time;
+        frame_time.tick(time.delta());
+        sprite.index += frame_time.frames();
+        if sprite.index >= animation.len {
+            sprite.index %= animation.len;
         }
     }
 }
@@ -426,7 +441,7 @@ fn change_player_animation(
         &Jump,
         &Velocity,
     )>,
-    animations: Res<Animations>,
+    animaitons: Res<Animations>,
 ) {
     for (player, mut atlas, mut animation, mut sprite, jump, velocity) in &mut player {
         if velocity.linvel.x < -0.1 {
@@ -480,9 +495,9 @@ fn change_player_animation(
             },
         };
 
-        let Some((new_atlas, new_animation)) = animations.get(set) else {error!("No Animation Jump Loaded"); return;};
+        let Some((new_atlas, new_animaiton)) = animaitons.get(set) else {error!("No Animation Jump Loaded"); return;};
         *atlas = new_atlas;
-        sprite.index %= new_animation.len;
-        *animation = new_animation;
+        sprite.index %= new_animaiton.len;
+        *animation = new_animaiton;
     }
 }

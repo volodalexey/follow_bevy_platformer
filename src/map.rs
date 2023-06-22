@@ -2,7 +2,7 @@ use bevy::prelude::{Commands, EventWriter, IVec3, Res, SpriteSheetBundle, Transf
 use bevy_rapier2d::prelude::{Collider, RigidBody, Sensor};
 
 use crate::{
-    animation::{Animation, Animations, FrameTime},
+    animation::{Animation, Animations, PhoxAnimationBundle},
     collectable::Collectable,
     tile_map::{MapBox, MapEvent, TerrainMaterial},
 };
@@ -104,8 +104,7 @@ pub fn spawn_map(
                 texture_atlas,
                 ..Default::default()
             },
-            animation,
-            FrameTime(0.0),
+            PhoxAnimationBundle::new(animation),
             RigidBody::Fixed,
             Collider::ball(8.),
             Sensor,
