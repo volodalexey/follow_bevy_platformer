@@ -60,7 +60,7 @@ pub fn spawn_map(
             sprite: TextureAtlasSprite {
                 custom_size: Some(Vec2::new(32., 32.)),
                 color: Color::WHITE,
-                index: TerrainType::GoldLeftEnd as usize,
+                index: TerrainType::GoldBlock as usize,
                 ..Default::default()
             },
             texture_atlas: terrain.get_atlas(),
@@ -69,6 +69,27 @@ pub fn spawn_map(
         RigidBody::Fixed,
         Collider::cuboid(16., 16.),
     ));
+    for i in 0..5 {
+        commands.spawn((
+            SpriteSheetBundle {
+                transform: Transform::from_translation(Vec3::new(
+                    -108. - (i as f32 * 16.),
+                    -16. + (i as f32 * 16.),
+                    0.,
+                )),
+                sprite: TextureAtlasSprite {
+                    custom_size: Some(Vec2::new(16., 16.)),
+                    color: Color::WHITE,
+                    index: TerrainType::GoldBlock as usize,
+                    ..Default::default()
+                },
+                texture_atlas: terrain.get_atlas(),
+                ..Default::default()
+            },
+            RigidBody::Fixed,
+            Collider::cuboid(8., 8.),
+        ));
+    }
     if let Some((texture_atlas, animation)) = animations.get(Animation::Strawberry) {
         commands.spawn((
             SpriteSheetBundle {
@@ -119,4 +140,5 @@ enum TerrainType {
     GoldLeftEnd = 193,
     GoldStright = 194,
     GoldRightEnd = 195,
+    GoldBlock = 215,
 }
