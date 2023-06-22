@@ -37,7 +37,7 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-#[derive(Component, Reflect, PartialEq)]
+#[derive(Component, Reflect, PartialEq, Clone, Copy)]
 pub enum Player {
     Mask,
     Ninja,
@@ -175,7 +175,7 @@ fn change_player(mut query: Query<(&mut Player, &ActionState<PlayerInput>)>) {
     }
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Clone, Copy)]
 pub struct Jump(pub bool);
 
 #[derive(Component, Reflect)]
