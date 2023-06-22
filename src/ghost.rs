@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::{
     CoefficientCombineRule, Collider, CollisionGroups, Damping, Friction, Group, LockedAxes,
-    RigidBody, Velocity,
+    RapierContext, RigidBody, Velocity,
 };
 use leafwing_input_manager::prelude::ActionState;
 
@@ -16,6 +16,7 @@ use crate::{
     animation::{Animation, Animations, PhoxAnimationBundle},
     player::{Grounded, GroundedCheck, Jump, Player, PlayerStages, RealPlayer},
     user_input::PlayerInput,
+    Score,
 };
 
 pub struct GhostPlugin;
@@ -32,7 +33,8 @@ impl Plugin for GhostPlugin {
             .add_system(drift_correct.in_base_set(CoreSet::Last))
             .add_system(test_ghost)
             .add_event::<GhostEvents>()
-            .add_system(handle_ghost_event);
+            .add_system(handle_ghost_event)
+            .add_system(kill_player);
     }
 }
 
@@ -203,4 +205,25 @@ pub enum GhostEvents {
     ClearTrail,
     ClearGhosts,
     SpawnGhost,
+}
+
+fn kill_player(
+    rapier_context: Res<RapierContext>,
+    mut player: Query<(Entity, &mut Transform, &mut Velocity), With<RealPlayer>>,
+    ghosts: Query<Entity, With<Ghost>>,
+    mut events: EventWriter<GhostEvents>,
+    mut score: ResMut<Score>,
+) {
+    let (player, mut pos, mut vel) = player.single_mut();
+    for ghost in &ghosts {
+        let Some(contact) = rapier_context.contact_pair(player, ghost) else { continue;};
+        if contact.has_any_active_contacts() {
+            println!("score = {}", score.0);
+            score.0 = 0;
+            events.send(GhostEvents::ClearGhosts);
+            events.send(GhostEvents::ClearTrail);
+            *pos = Transform::IDENTITY;
+            *vel = Velocity::zero();
+        };
+    }
 }

@@ -1,8 +1,8 @@
-use bevy::prelude::{Component, Entity, EventWriter, Query, Res, Transform, With};
+use bevy::prelude::{Component, Entity, EventWriter, Query, Res, ResMut, Transform, With};
 use bevy_rapier2d::prelude::RapierContext;
 use rand::Rng;
 
-use crate::{ghost::GhostEvents, player::RealPlayer};
+use crate::{ghost::GhostEvents, player::RealPlayer, Score};
 
 #[derive(Component)]
 pub struct Collectable;
@@ -12,25 +12,23 @@ pub fn get_collectable(
     mut collectables: Query<&mut Transform, With<Collectable>>,
     rapier_context: Res<RapierContext>,
     mut events: EventWriter<GhostEvents>,
+    mut score: ResMut<Score>,
 ) {
     let entity = player.single();
-
     /* Iterate through all the intersection pairs involving a specific collider. */
     for (collider1, collider2, intersecting) in rapier_context.intersections_with(entity) {
         if intersecting {
-            println!(
-                "The entities {:?} and {:?} have intersecting colliders!",
-                collider1, collider2
-            );
             if let Ok(mut pos) = collectables.get_mut(collider2) {
                 pos.translation.x = rand::thread_rng().gen_range(-100.0..100.);
                 pos.translation.y = rand::thread_rng().gen_range(-10.0..150.);
                 events.send(GhostEvents::SpawnGhost);
+                score.0 += 1;
             }
             if let Ok(mut pos) = collectables.get_mut(collider1) {
                 pos.translation.x = rand::thread_rng().gen_range(-100.0..100.);
                 pos.translation.y = rand::thread_rng().gen_range(-10.0..150.);
                 events.send(GhostEvents::SpawnGhost);
+                score.0 += 1;
             }
         }
     }

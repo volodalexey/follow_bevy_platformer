@@ -7,7 +7,9 @@ mod player;
 mod tile_map;
 mod user_input;
 
-use bevy::prelude::{App, DefaultPlugins, ImagePlugin, PluginGroup, TextureAtlasSprite, Vec2};
+use bevy::prelude::{
+    App, DefaultPlugins, ImagePlugin, PluginGroup, Resource, TextureAtlasSprite, Vec2,
+};
 use bevy_rapier2d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin, TimestepMode};
 use leafwing_input_manager::prelude::InputManagerPlugin;
 
@@ -32,5 +34,9 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(tile_map::MapPlugin)
         .add_plugin(ghost::GhostPlugin)
+        .insert_resource(Score(0))
         .run()
 }
+
+#[derive(Resource)]
+pub struct Score(usize);
