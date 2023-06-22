@@ -1,13 +1,13 @@
 use bevy::{
     prelude::{
-        error, info, App, Changed, Commands, Component, Entity, IntoSystemConfig, Local, Name,
-        Plugin, Query, Res, SpriteSheetBundle, TextureAtlasSprite, Transform, Vec2, With,
+        error, App, Changed, Commands, Component, Entity, IntoSystemConfig, Local, Name, Plugin,
+        Query, Res, SpriteSheetBundle, TextureAtlasSprite, Transform, Vec2, With,
     },
     reflect::Reflect,
 };
 use bevy_rapier2d::prelude::{
-    CoefficientCombineRule, Collider, Friction, LockedAxes, QueryFilter, RapierContext, RigidBody,
-    Velocity,
+    CoefficientCombineRule, Collider, Damping, Friction, LockedAxes, QueryFilter, RapierContext,
+    RigidBody, Velocity,
 };
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 
@@ -67,11 +67,15 @@ fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
             coefficient: 5.,
             combine_rule: CoefficientCombineRule::Multiply,
         },
+        Damping {
+            linear_damping: 1.,
+            angular_damping: 1.,
+        },
         Name::new("Player"),
     ));
 }
 
-const MOVE_SPEED: f32 = 100.;
+const MOVE_SPEED: f32 = 200.;
 
 fn move_player(
     mut player: Query<
@@ -87,7 +91,7 @@ fn move_player(
 ) {
     let (mut velocity, input, grounded, pos) = player.single_mut();
     if input.just_pressed(PlayerInput::Jump) & grounded {
-        velocity.linvel.y = 100.;
+        velocity.linvel.y = 500.;
     } else if input.just_pressed(PlayerInput::Fall) {
         velocity.linvel.y = velocity.linvel.y.min(0.0);
     } else if input.pressed(PlayerInput::Left) {
@@ -109,10 +113,6 @@ fn move_player(
             false,
             QueryFilter::exclude_dynamic().exclude_sensors(),
         );
-        if let Some(hit) = hit {
-            info!("Player hit {:?}", hit.0);
-            //velocity.linvel.x = 0.0
-        }
         if hit.is_none() {
             velocity.linvel.x = MOVE_SPEED;
         }
@@ -136,7 +136,7 @@ fn double_jump(
         }
         if input.just_pressed(PlayerInput::Jump) && jump.0 {
             jump.0 = false;
-            velocity.linvel.y = 100.;
+            velocity.linvel.y = 500.;
         }
     }
 }

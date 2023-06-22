@@ -1,95 +1,76 @@
-use bevy::prelude::{
-    AssetServer, Assets, BuildChildren, Color, Commands, FromWorld, Handle, Res, Resource,
-    SpriteSheetBundle, TextureAtlas, TextureAtlasSprite, Transform, Vec2, Vec3, World,
-};
+use bevy::prelude::{Commands, EventWriter, IVec3, Res, SpriteSheetBundle, Transform, Vec3};
 use bevy_rapier2d::prelude::{Collider, RigidBody, Sensor};
 
 use crate::{
     animation::{Animation, Animations, FrameTime},
     collectable::Collectable,
+    tile_map::{MapBox, MapEvent, TerrainMaterial},
 };
 
 pub fn spawn_map(
     mut commands: Commands,
     animations: Res<Animations>,
-    terrain: Res<TerrainSprites>,
+    mut map_event: EventWriter<MapEvent>,
 ) {
-    commands
-        .spawn((
-            SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::NEG_Y * 32.),
-                sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::new(168., 16.)),
-                    color: Color::WHITE,
-                    index: TerrainType::GoldStright as usize,
-                    ..Default::default()
-                },
-                texture_atlas: terrain.get_atlas(),
-                ..Default::default()
-            },
-            RigidBody::Fixed,
-            Collider::cuboid(100., 8.),
-        ))
-        .with_children(|p| {
-            p.spawn(SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::X * 92.),
-                sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::new(16., 16.)),
-                    color: Color::WHITE,
-                    index: TerrainType::GoldRightEnd as usize,
-                    ..Default::default()
-                },
-                texture_atlas: terrain.get_atlas(),
-                ..Default::default()
-            });
-            p.spawn(SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::NEG_X * 92.),
-                sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::new(16., 16.)),
-                    color: Color::WHITE,
-                    index: TerrainType::GoldLeftEnd as usize,
-                    ..Default::default()
-                },
-                texture_atlas: terrain.get_atlas(),
-                ..Default::default()
-            });
-        });
-    commands.spawn((
-        SpriteSheetBundle {
-            transform: Transform::from_translation(Vec3::new(110., 20., 0.)),
-            sprite: TextureAtlasSprite {
-                custom_size: Some(Vec2::new(32., 32.)),
-                color: Color::WHITE,
-                index: TerrainType::GoldBlock as usize,
-                ..Default::default()
-            },
-            texture_atlas: terrain.get_atlas(),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Collider::cuboid(16., 16.),
-    ));
+    map_event.send(MapEvent::Spawn(Box::new(MapBox {
+        offset: IVec3 { x: -6, y: -1, z: 1 },
+        width: 13,
+        hight: 1,
+        material: TerrainMaterial::Gold,
+    })));
+    map_event.send(MapEvent::Spawn(Box::new(MapBox {
+        offset: IVec3 { x: 7, y: 1, z: 1 },
+        width: 2,
+        hight: 2,
+        material: TerrainMaterial::Gold,
+    })));
     for i in 0..5 {
-        commands.spawn((
-            SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::new(
-                    -108. - (i as f32 * 16.),
-                    -16. + (i as f32 * 16.),
-                    0.,
-                )),
-                sprite: TextureAtlasSprite {
-                    custom_size: Some(Vec2::new(16., 16.)),
-                    color: Color::WHITE,
-                    index: TerrainType::GoldBlock as usize,
-                    ..Default::default()
-                },
-                texture_atlas: terrain.get_atlas(),
-                ..Default::default()
+        map_event.send(MapEvent::Spawn(Box::new(MapBox {
+            offset: IVec3 {
+                x: -7 - i,
+                y: i,
+                z: 1,
             },
-            RigidBody::Fixed,
-            Collider::cuboid(8., 8.),
-        ));
+            width: 1,
+            hight: 1,
+            material: TerrainMaterial::Gold,
+        })));
     }
+
+    for i in 0..5 {
+        map_event.send(MapEvent::Spawn(Box::new(MapBox {
+            offset: IVec3 {
+                x: i * 2,
+                y: 15,
+                z: 1,
+            },
+            width: 1,
+            hight: 1,
+            material: TerrainMaterial::Gold,
+        })));
+    }
+
+    map_event.send(MapEvent::Spawn(Box::new(MapBox {
+        offset: IVec3 { x: -5, y: 10, z: 1 },
+        width: 1,
+        hight: 4,
+        material: TerrainMaterial::Gold,
+    })));
+
+    map_event.send(MapEvent::Spawn(Box::new(MapBox {
+        offset: IVec3 { x: -6, y: 11, z: 1 },
+        width: 1,
+        hight: 5,
+        material: TerrainMaterial::Gold,
+    })));
+
+    map_event.send(MapEvent::Spawn(Box::new(MapBox {
+        offset: IVec3 { x: -10, y: 6, z: 1 },
+        width: 2,
+        hight: 2,
+        material: TerrainMaterial::Gold,
+    })));
+
     if let Some((texture_atlas, animation)) = animations.get(Animation::Strawberry) {
         commands.spawn((
             SpriteSheetBundle {
@@ -105,40 +86,4 @@ pub fn spawn_map(
             Collectable,
         ));
     }
-}
-
-#[derive(Resource)]
-pub struct TerrainSprites(Handle<TextureAtlas>);
-
-impl TerrainSprites {
-    fn new(handle: Handle<TextureAtlas>) -> TerrainSprites {
-        TerrainSprites(handle)
-    }
-    fn get_atlas(&self) -> Handle<TextureAtlas> {
-        self.0.clone()
-    }
-}
-
-impl FromWorld for TerrainSprites {
-    fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource::<AssetServer>();
-        let texture_atles = TextureAtlas::from_grid(
-            asset_server.load("Terrain/Terrain (16x16).png"),
-            Vec2::splat(16.),
-            22,
-            11,
-            None,
-            None,
-        );
-        let mut assets = world.resource_mut::<Assets<TextureAtlas>>();
-        TerrainSprites::new(assets.add(texture_atles))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum TerrainType {
-    GoldLeftEnd = 193,
-    GoldStright = 194,
-    GoldRightEnd = 195,
-    GoldBlock = 215,
 }
