@@ -6,13 +6,13 @@ use bevy::{
     reflect::Reflect,
 };
 use bevy_rapier2d::prelude::{
-    CoefficientCombineRule, Collider, Friction, LockedAxes, NoUserData, QueryFilter, RapierContext,
-    RapierPhysicsPlugin, RigidBody, Velocity,
+    CoefficientCombineRule, Collider, Friction, LockedAxes, QueryFilter, RapierContext, RigidBody,
+    Velocity,
 };
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 
 use crate::{
-    animation::{Animation, Animations, FrameTime, PhoxAnimationBundle},
+    animation::{Animation, Animations, PhoxAnimationBundle},
     user_input::PlayerInput,
 };
 
@@ -22,10 +22,9 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(spawn_player)
             .add_system(move_player)
-            .add_system(change_player)
-            .add_system(double_jump.before(move_player))
             .add_system(ground_detection)
-            .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.))
+            .add_system(dubble_jump.before(move_player))
+            .add_system(change_player)
             .register_type::<Grounded>()
             .register_type::<Jump>()
             .register_type::<Player>();
@@ -40,46 +39,7 @@ pub enum Player {
     Guy,
 }
 
-#[derive(Component, Reflect)]
-pub struct Grounded(pub bool);
-
-impl std::ops::BitAnd<bool> for Grounded {
-    type Output = bool;
-    fn bitand(self, rhs: bool) -> Self::Output {
-        self.0 & rhs
-    }
-}
-
-impl std::ops::BitAnd<&Grounded> for bool {
-    type Output = bool;
-    fn bitand(self, rhs: &Grounded) -> Self::Output {
-        self & rhs.0
-    }
-}
-
-pub fn ground_detection(
-    mut player: Query<(&Transform, &mut Grounded), With<Player>>,
-    mut last: Local<(f32, isize)>,
-) {
-    let (pos, mut on_ground) = player.single_mut();
-
-    if (pos.translation.y * 1000.).round() == last.0 {
-        last.1 += 1;
-    } else {
-        last.1 -= 1;
-    };
-    last.1 = last.1.clamp(0, 3);
-
-    if last.1 == 3 && !on_ground.0 {
-        on_ground.0 = true;
-    } else if last.1 == 0 && on_ground.0 {
-        on_ground.0 = false;
-    }
-
-    last.0 = (pos.translation.y * 1000.).round();
-}
-
-pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
+fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
     let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
     commands.spawn((
         SpriteSheetBundle {
@@ -91,10 +51,7 @@ pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
             ..Default::default()
         },
         Player::Mask,
-        PhoxAnimationBundle {
-            animation,
-            frame_time: FrameTime(0.),
-        },
+        PhoxAnimationBundle::new(animation),
         Grounded(true),
         InputManagerBundle {
             input_map: PlayerInput::player_one(),
@@ -113,12 +70,9 @@ pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
     ));
 }
 
-#[derive(Component, Reflect)]
-pub struct Jump(pub bool);
-
 const MOVE_SPEED: f32 = 100.;
 
-pub fn move_player(
+fn move_player(
     mut player: Query<
         (
             &mut Velocity,
@@ -164,7 +118,7 @@ pub fn move_player(
     };
 }
 
-pub fn double_jump(
+fn dubble_jump(
     mut player: Query<(&mut Jump, &mut Velocity, &ActionState<PlayerInput>), With<Player>>,
     can_jump: Query<(Entity, &Grounded), Changed<Grounded>>,
 ) {
@@ -203,5 +157,47 @@ fn change_player(mut query: Query<(&mut Player, &ActionState<PlayerInput>)>) {
                 Player::Guy => Player::Mask,
             };
         }
+    }
+}
+
+#[derive(Component, Reflect)]
+pub struct Jump(pub bool);
+
+#[derive(Component, Reflect)]
+pub struct Grounded(bool);
+
+fn ground_detection(
+    mut player: Query<(&Transform, &mut Grounded), With<Player>>,
+    mut last: Local<(f32, isize)>,
+) {
+    let (pos, mut on_ground) = player.single_mut();
+
+    if (pos.translation.y * 1000.).round() == last.0 {
+        last.1 += 1;
+    } else {
+        last.1 -= 1;
+    };
+    last.1 = last.1.clamp(0, 3);
+
+    if last.1 == 3 && !on_ground.0 {
+        on_ground.0 = true;
+    } else if last.1 == 0 && on_ground.0 {
+        on_ground.0 = false;
+    }
+
+    last.0 = (pos.translation.y * 1000.).round();
+}
+
+impl std::ops::BitAnd<bool> for Grounded {
+    type Output = bool;
+    fn bitand(self, rhs: bool) -> Self::Output {
+        self.0 & rhs
+    }
+}
+
+impl std::ops::BitAnd<&Grounded> for bool {
+    type Output = bool;
+    fn bitand(self, rhs: &Grounded) -> Self::Output {
+        self & rhs.0
     }
 }

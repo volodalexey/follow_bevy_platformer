@@ -64,6 +64,15 @@ pub struct PhoxAnimationBundle {
     pub frame_time: FrameTime,
 }
 
+impl PhoxAnimationBundle {
+    pub fn new(animation: SpriteAnimation) -> PhoxAnimationBundle {
+        PhoxAnimationBundle {
+            animation,
+            frame_time: FrameTime(0.0),
+        }
+    }
+}
+
 pub fn animate_sprite(
     mut animations: Query<(&mut TextureAtlasSprite, &SpriteAnimation, &mut FrameTime)>,
     time: Res<Time>,

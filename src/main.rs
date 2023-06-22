@@ -6,6 +6,7 @@ mod player;
 mod user_input;
 
 use bevy::prelude::{App, DefaultPlugins, ImagePlugin, PluginGroup, TextureAtlasSprite};
+use bevy_rapier2d::prelude::{NoUserData, RapierPhysicsPlugin};
 use leafwing_input_manager::prelude::InputManagerPlugin;
 
 fn main() {
@@ -19,5 +20,6 @@ fn main() {
         .init_resource::<map::TerrainSprites>()
         .register_type::<TextureAtlasSprite>()
         .add_plugin(InputManagerPlugin::<user_input::PlayerInput>::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.))
         .run()
 }
