@@ -76,12 +76,9 @@ pub enum TerrainType {
 
 impl TerrainMaterial {
     fn to_sprite(self, terrain_type: TerrainType) -> usize {
+        use TerrainMaterial::*;
         match self {
-            TerrainMaterial::Gold
-            | TerrainMaterial::Clay
-            | TerrainMaterial::Copper
-            | TerrainMaterial::Iron
-            | TerrainMaterial::Brick => self as usize + terrain_type as usize,
+            Gold | Clay | Copper | Iron | Brick => self as usize + terrain_type as usize,
         }
     }
 }
@@ -323,7 +320,12 @@ pub struct MapData {
     empty: HashSet<IVec2>,
 }
 
+#[allow(dead_code)]
 impl MapData {
+    pub fn is_empty(&self, cell: IVec2) -> bool {
+        !self.empty.contains(&cell)
+    }
+
     pub fn set_full(&mut self, cell: IVec2) {
         self.empty.insert(cell);
     }

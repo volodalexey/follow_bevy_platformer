@@ -2,13 +2,13 @@ use bevy::prelude::{Component, Entity, Query, Res, Transform, With};
 use bevy_rapier2d::prelude::RapierContext;
 use rand::Rng;
 
-use crate::player::Player;
+use crate::player::RealPlayer;
 
 #[derive(Component)]
 pub struct Collectable;
 
 pub fn get_collectable(
-    player: Query<Entity, With<Player>>,
+    player: Query<Entity, With<RealPlayer>>,
     mut collectables: Query<&mut Transform, With<Collectable>>,
     rapier_context: Res<RapierContext>,
 ) {

@@ -46,7 +46,7 @@ pub fn spawn_map(
             },
             width: 1,
             hight: 1,
-            material: TerrainMaterial::Gold,
+            material: TerrainMaterial::Brick,
         })));
     }
 
