@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use bevy::{
     prelude::{
-        error, AddAsset, Added, App, AssetServer, Assets, Changed, Commands, Component, Entity,
-        FromWorld, Handle, Plugin, Query, Res, Resource, TextureAtlas, TextureAtlasSprite, Time,
-        Without, World,
+        error, AddAsset, Added, App, AssetServer, Assets, Changed, Commands, Component, CoreSet,
+        Entity, FromWorld, Handle, IntoSystemConfig, Plugin, Query, Res, Resource, TextureAtlas,
+        TextureAtlasSprite, Time, Without, World,
     },
     reflect::TypeUuid,
     time::{Timer, TimerMode},
@@ -22,7 +22,7 @@ impl Plugin for PhoxAnimationPlugin {
         app.add_system(animate_sprite)
             .add_system(change_player_animation)
             .add_system(update_animation_components)
-            .add_system(add_frame_time)
+            .add_system(add_frame_time.in_base_set(CoreSet::Last))
             .add_asset::<SpriteAnimation>()
             .add_asset_loader(AnimationLoader)
             .init_resource::<Animations>()
