@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        error, App, Changed, Commands, Component, Entity, IntoSystemConfig, Local, Plugin, Query,
-        Res, SpriteSheetBundle, TextureAtlasSprite, Transform, With,
+        error, App, Changed, Commands, Component, Entity, IntoSystemConfig, Local, Name, Plugin,
+        Query, Res, SpriteSheetBundle, TextureAtlasSprite, Transform, With,
     },
     reflect::Reflect,
 };
@@ -21,16 +21,23 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(spawn_player)
             .add_system(move_player)
+            .add_system(change_player)
             .add_system(double_jump.before(move_player))
             .add_system(ground_detection)
             .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.))
             .register_type::<Grounded>()
-            .register_type::<Jump>();
+            .register_type::<Jump>()
+            .register_type::<Player>();
     }
 }
 
-#[derive(Component)]
-pub struct Player;
+#[derive(Component, Reflect, PartialEq)]
+pub enum Player {
+    Mask,
+    Ninja,
+    Pink,
+    Guy,
+}
 
 #[derive(Component, Reflect)]
 pub struct Grounded(pub bool);
@@ -58,7 +65,7 @@ pub fn ground_detection(
 }
 
 pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
-    let Some((texture_atlas, animation)) = animations.get(Animation::PlayerIdle) else {error!("Failed to find animation: Idle"); return;};
+    let Some((texture_atlas, animation)) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas,
@@ -68,7 +75,7 @@ pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
             },
             ..Default::default()
         },
-        Player,
+        Player::Mask,
         PhoxAnimationBundle {
             animation,
             frame_time: FrameTime(0.),
@@ -83,6 +90,7 @@ pub fn spawn_player(mut commands: Commands, animations: Res<Animations>) {
         Velocity::default(),
         Collider::cuboid(9., 16.),
         LockedAxes::ROTATION_LOCKED_Z,
+        Name::new("Player"),
     ));
 }
 
@@ -128,6 +136,26 @@ pub fn double_jump(
         if input.just_pressed(PlayerInput::Jump) && jump.0 {
             jump.0 = false;
             velocity.linvel.y = 100.;
+        }
+    }
+}
+
+fn change_player(mut query: Query<(&mut Player, &ActionState<PlayerInput>)>) {
+    for (mut player, state) in &mut query {
+        if state.just_pressed(PlayerInput::NextPlayer) {
+            *player = match *player {
+                Player::Mask => Player::Ninja,
+                Player::Ninja => Player::Pink,
+                Player::Pink => Player::Guy,
+                Player::Guy => Player::Mask,
+            };
+        } else if state.just_pressed(PlayerInput::PevPlayer) {
+            *player = match *player {
+                Player::Mask => Player::Ninja,
+                Player::Ninja => Player::Pink,
+                Player::Pink => Player::Guy,
+                Player::Guy => Player::Mask,
+            };
         }
     }
 }
