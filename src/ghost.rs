@@ -1,10 +1,12 @@
 use bevy::{
+    ecs::query::QuerySingleError,
     prelude::{
         error, App, Commands, Component, CoreSet, Entity, EventReader, EventWriter, Handle, Input,
-        IntoSystemConfig, KeyCode, Name, Plugin, Query, Res, ResMut, Resource, Transform, Vec3,
-        With,
+        IntoSystemConfig, KeyCode, Local, Name, ParamSet, Plugin, Query, Res, ResMut, Resource,
+        Transform, Vec3, With,
     },
     sprite::{SpriteSheetBundle, TextureAtlasSprite},
+    time::{Time, Timer, TimerMode},
 };
 use bevy_rapier2d::prelude::{
     CoefficientCombineRule, Collider, CollisionGroups, Damping, Friction, Group, LockedAxes,
@@ -34,7 +36,8 @@ impl Plugin for GhostPlugin {
             .add_system(test_ghost)
             .add_event::<GhostEvents>()
             .add_system(handle_ghost_event)
-            .add_system(kill_player);
+            .add_system(kill_player)
+            .add_system(auto_ghost);
     }
 }
 
@@ -225,5 +228,41 @@ fn kill_player(
             *pos = Transform::IDENTITY;
             *vel = Velocity::zero();
         };
+    }
+}
+
+struct GhostTimer(Timer);
+impl Default for GhostTimer {
+    fn default() -> Self {
+        GhostTimer(Timer::from_seconds(2.5, TimerMode::Once))
+    }
+}
+
+fn auto_ghost(
+    has_ghost: Query<&Ghost>,
+    player: Query<&Transform, With<RealPlayer>>,
+    mut count_down: Local<GhostTimer>,
+    mut events: ParamSet<(EventReader<GhostEvents>, EventWriter<GhostEvents>)>,
+    time: Res<Time>,
+) {
+    for event in events.p0().iter() {
+        match event {
+            GhostEvents::ClearGhosts => {
+                count_down.0.reset();
+            }
+            _ => {}
+        }
+    }
+    if let Err(QuerySingleError::NoEntities(_)) = has_ghost.get_single() {
+        let player = player.single();
+        if player.translation.distance(Vec3::ZERO) < 8. && !count_down.0.finished() {
+            events.p1().send(GhostEvents::ClearTrail);
+            count_down.0.reset();
+            return;
+        }
+        count_down.0.tick(time.delta());
+        if count_down.0.finished() {
+            events.p1().send(GhostEvents::SpawnGhost);
+        }
     }
 }
