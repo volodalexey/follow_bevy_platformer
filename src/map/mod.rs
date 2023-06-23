@@ -1,19 +1,33 @@
-use bevy::prelude::{
-    default, Commands, EventWriter, IVec3, Res, SpriteSheetBundle, Transform, Vec3,
+use bevy::{
+    prelude::{
+        Bundle, ComputedVisibility, EventWriter, GlobalTransform, Handle, IVec3, Transform,
+        Visibility,
+    },
+    sprite::{TextureAtlas, TextureAtlasSprite},
 };
-use bevy_rapier2d::prelude::{Collider, RigidBody, Sensor};
+use bevy_rapier2d::prelude::{Collider, RigidBody};
 
-use crate::{
-    animation::{Animation, Animations},
-    collectable::Collectable,
-    tile_map::{MapBox, MapEvent, TerrainMaterial},
+use self::{
+    square::MapBox,
+    tile_map::{spawn_map_objects, MapData, MapEvent, TerrainMaterial},
 };
 
-pub fn spawn_map(
-    mut commands: Commands,
-    animations: Res<Animations>,
-    mut map_event: EventWriter<MapEvent>,
-) {
+mod collectable;
+mod square;
+mod tile_map;
+pub struct MapPlugin;
+
+impl bevy::prelude::Plugin for MapPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_startup_system(spawn_map)
+            .add_event::<MapEvent>()
+            .add_system(collectable::get_collectable)
+            .add_system(spawn_map_objects)
+            .init_resource::<MapData>();
+    }
+}
+
+fn spawn_map(mut map_event: EventWriter<MapEvent>) {
     map_event.send(MapEvent::Spawn(Box::new(MapBox {
         offset: IVec3 { x: -6, y: -1, z: 1 },
         width: 13,
@@ -35,11 +49,11 @@ pub fn spawn_map(
     for i in 0..5 {
         map_event.send(MapEvent::Spawn(Box::new(MapBox {
             offset: IVec3 {
-                x: -7 - i,
-                y: i,
+                x: -11,
+                y: 4 - i,
                 z: 1,
             },
-            width: 1,
+            width: 1 + i,
             hight: 1,
             material: TerrainMaterial::Gold,
         })));
@@ -98,19 +112,27 @@ pub fn spawn_map(
         hight: 1,
         material: TerrainMaterial::Iron,
     })));
+    /*
+    map_event.send(MapEvent::Spawn(Collectable {
+        collectable_type: CollectableType::Strawberry,
+        spawn_type: SpawnType::Fixed(IVec2::new(2, 1)),
+    }));
 
-    if let Some(handle) = animations.get(Animation::Strawberry) {
-        commands.spawn((
-            SpriteSheetBundle {
-                transform: Transform::from_translation(Vec3::new(32., 16., 0.)),
-                texture_atlas: default(),
-                ..Default::default()
-            },
-            handle,
-            RigidBody::Fixed,
-            Collider::ball(8.),
-            Sensor,
-            Collectable,
-        ));
-    }
+    map_event.send(MapEvent::Spawn(Collectable {
+        collectable_type: CollectableType::Bananan,
+        spawn_type: SpawnType::RandomRange(IVec2::new(-10, 0), IVec2::new(10, 20)),
+    }));
+    */
+}
+
+#[derive(Bundle, Default)]
+struct CellBundle {
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+    pub visibility: Visibility,
+    pub computed_visibility: ComputedVisibility,
+    pub sprite: TextureAtlasSprite,
+    pub texture_atlas: Handle<TextureAtlas>,
+    pub collider: Collider,
+    pub rigid_body: RigidBody,
 }

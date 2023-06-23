@@ -165,7 +165,7 @@ fn handle_ghost_event(
                 }
             }
             GhostEvents::SpawnGhost => {
-                let Some(handle) = animations.get(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
+                let Some(handle) = animations.get_animation(Animation::MaskIdle) else {error!("Failed to find animation: Idle"); return;};
                 commands.spawn((
                     (
                         SpriteSheetBundle {
