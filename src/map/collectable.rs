@@ -7,6 +7,7 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::{Collider, RapierContext, RigidBody, Sensor};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     animation::{Animation, Animations},
@@ -32,12 +33,12 @@ pub fn get_collectable(
         if intersecting {
             if let Ok(collectable) = collectables.get_mut(collider2) {
                 events.send(GhostEvents::SpawnGhost);
-                map_events.send(MapEvent::spawn(collectable.clone()));
+                map_events.send(MapEvent::spawn(Clone::clone(collectable)));
                 score.0 += 1;
                 commands.entity(collider2).despawn_recursive();
             }
             if let Ok(collectable) = collectables.get_mut(collider1) {
-                map_events.send(MapEvent::spawn(collectable.clone()));
+                map_events.send(MapEvent::spawn(Clone::clone(collectable)));
                 events.send(GhostEvents::SpawnGhost);
                 score.0 += 1;
                 commands.entity(collider2).despawn_recursive();
@@ -46,14 +47,13 @@ pub fn get_collectable(
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Deserialize, Serialize)]
 pub struct Collectable {
     pub collectable_type: CollectableType,
     pub spawn_type: SpawnType,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum CollectableType {
     Strawberry,
     Bananan,
@@ -68,8 +68,7 @@ impl Into<Animation> for CollectableType {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum SpawnType {
     None,
     RandomRange(IVec2, IVec2),
@@ -79,12 +78,11 @@ pub enum SpawnType {
     OrderDec(Vec<IVec2>),
     RandomPointsDec(Vec<IVec2>),
 }
-
 const MAX_RNG_TRYS: usize = 50;
 
 impl MapObject for Collectable {
     fn spawn(&self, terrain: &Animations, commands: &mut Commands, map_data: &mut MapData) {
-        let mut new_self = self.clone();
+        let mut new_self = <Self as Clone>::clone(self);
         let mut set_none = false;
         let pos = match &mut new_self.spawn_type {
             SpawnType::None => {
@@ -169,5 +167,14 @@ impl MapObject for Collectable {
             Name::new("Collectable"),
             new_self,
         ));
+    }
+    fn object_type(&self) -> super::levels::MapObjectType {
+        super::levels::MapObjectType::Collectable
+    }
+    fn serializable(&self) -> bevy::reflect::serde::Serializable {
+        bevy::reflect::serde::Serializable::Borrowed(self)
+    }
+    fn clone(&self) -> Box<dyn MapObject> {
+        Box::new(<Self as Clone>::clone(self))
     }
 }

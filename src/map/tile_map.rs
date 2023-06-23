@@ -1,6 +1,10 @@
 use std::collections::HashSet;
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::{Commands, EventReader, IVec2, Res, ResMut, Resource},
+    reflect::{Reflect, ReflectSerialize},
+};
+use serde::{Deserialize, Serialize};
 
 use crate::animation::Animations;
 
@@ -14,7 +18,8 @@ impl MapEvent {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize, Serialize, Reflect)]
+#[reflect_value(Serialize)]
 #[allow(dead_code)]
 pub enum TerrainMaterial {
     Gold = 193,
@@ -47,8 +52,11 @@ impl TerrainMaterial {
     }
 }
 
-pub trait MapObject: 'static + Send + Sync {
+pub trait MapObject: 'static + Send + Sync + std::any::Any {
     fn spawn(&self, animation_data: &Animations, commands: &mut Commands, map_data: &mut MapData);
+    fn object_type(&self) -> super::levels::MapObjectType;
+    fn serializable(&self) -> bevy::reflect::serde::Serializable;
+    fn clone(&self) -> Box<dyn MapObject>;
 }
 
 pub fn spawn_map_objects(

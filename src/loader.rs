@@ -1,6 +1,7 @@
 use bevy::{
     asset::{AssetLoader, LoadedAsset},
-    prelude::*,
+    prelude::Vec2,
+    sprite::TextureAtlas,
 };
 use serde::{Deserialize, Serialize};
 

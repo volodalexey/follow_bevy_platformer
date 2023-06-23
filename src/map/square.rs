@@ -3,6 +3,7 @@ use bevy::{
     sprite::TextureAtlasSprite,
 };
 use bevy_rapier2d::prelude::{Collider, RigidBody};
+use serde::{Deserialize, Serialize};
 
 use crate::animation::{Animation, Animations};
 
@@ -11,7 +12,7 @@ use super::{
     CellBundle,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct MapBox {
     pub offset: IVec3,
     pub width: i32,
@@ -222,5 +223,14 @@ impl MapObject for MapBox {
                 warn!("Spawning boxes of size ({},{}) is not implmeted", x, y);
             }
         }
+    }
+    fn object_type(&self) -> super::levels::MapObjectType {
+        super::levels::MapObjectType::Box
+    }
+    fn serializable(&self) -> bevy::reflect::serde::Serializable {
+        bevy::reflect::serde::Serializable::Borrowed(self)
+    }
+    fn clone(&self) -> Box<dyn MapObject> {
+        Box::new(<Self as Clone>::clone(self))
     }
 }

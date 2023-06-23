@@ -1,18 +1,17 @@
 use bevy::{
     prelude::{
-        Bundle, ComputedVisibility, EventWriter, GlobalTransform, Handle, IVec3, Transform,
-        Visibility,
+        AddAsset, AssetServer, Assets, Bundle, Commands, ComputedVisibility, EventWriter,
+        GlobalTransform, Handle, Res, ResMut, Resource, Transform, Visibility,
     },
     sprite::{TextureAtlas, TextureAtlasSprite},
 };
 use bevy_rapier2d::prelude::{Collider, RigidBody};
 
-use self::{
-    square::MapBox,
-    tile_map::{spawn_map_objects, MapData, MapEvent, TerrainMaterial},
-};
+use self::levels::Level;
+use self::tile_map::{spawn_map_objects, MapData, MapEvent, MapObject};
 
 mod collectable;
+mod levels;
 mod square;
 mod tile_map;
 pub struct MapPlugin;
@@ -20,109 +19,39 @@ pub struct MapPlugin;
 impl bevy::prelude::Plugin for MapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system(spawn_map)
+            .add_system(update_map)
             .add_event::<MapEvent>()
             .add_system(collectable::get_collectable)
             .add_system(spawn_map_objects)
-            .init_resource::<MapData>();
+            .init_resource::<MapData>()
+            .add_asset::<Level>()
+            .add_asset_loader(levels::LevelLoader);
     }
 }
 
-fn spawn_map(mut map_event: EventWriter<MapEvent>) {
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -6, y: -1, z: 1 },
-        width: 13,
-        hight: 1,
-        material: TerrainMaterial::Gold,
-    })));
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: 7, y: 1, z: 1 },
-        width: 2,
-        hight: 2,
-        material: TerrainMaterial::Gold,
-    })));
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: 7, y: 1, z: 1 },
-        width: 1,
-        hight: 1,
-        material: TerrainMaterial::Clay,
-    })));
-    for i in 0..5 {
-        map_event.send(MapEvent::Spawn(Box::new(MapBox {
-            offset: IVec3 {
-                x: -11,
-                y: 4 - i,
-                z: 1,
-            },
-            width: 1 + i,
-            hight: 1,
-            material: TerrainMaterial::Gold,
-        })));
+#[derive(Debug, Resource)]
+struct CurrentLevel(Handle<levels::Level>, bool);
+
+fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(CurrentLevel(
+        asset_server.load("Levels/test.lvl.ron"),
+        false,
+    ));
+}
+
+fn update_map(
+    mut map_event: EventWriter<MapEvent>,
+    levels: Res<Assets<Level>>,
+    mut current_level: ResMut<CurrentLevel>,
+) {
+    if current_level.1 {
+        return;
     }
-
-    for i in 0..5 {
-        map_event.send(MapEvent::Spawn(Box::new(MapBox {
-            offset: IVec3 {
-                x: i * 2,
-                y: 15,
-                z: 1,
-            },
-            width: 1,
-            hight: 1,
-            material: TerrainMaterial::Brick,
-        })));
+    let Some(level) = levels.get(&current_level.0) else {return;};
+    for obj in level.objects.iter() {
+        map_event.send(MapEvent::Spawn(MapObject::clone(obj.as_ref())))
     }
-
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -5, y: 10, z: 1 },
-        width: 1,
-        hight: 4,
-        material: TerrainMaterial::Gold,
-    })));
-
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -6, y: 9, z: 1 },
-        width: 1,
-        hight: 5,
-        material: TerrainMaterial::Gold,
-    })));
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -6, y: 9, z: 1 },
-        width: 1,
-        hight: 1,
-        material: TerrainMaterial::Clay,
-    })));
-
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -10, y: 6, z: 1 },
-        width: 2,
-        hight: 2,
-        material: TerrainMaterial::Gold,
-    })));
-
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -2, y: 7, z: 1 },
-        width: 5,
-        hight: 1,
-        material: TerrainMaterial::Copper,
-    })));
-
-    map_event.send(MapEvent::Spawn(Box::new(MapBox {
-        offset: IVec3 { x: -2, y: 8, z: 1 },
-        width: 4,
-        hight: 1,
-        material: TerrainMaterial::Iron,
-    })));
-    /*
-    map_event.send(MapEvent::Spawn(Collectable {
-        collectable_type: CollectableType::Strawberry,
-        spawn_type: SpawnType::Fixed(IVec2::new(2, 1)),
-    }));
-
-    map_event.send(MapEvent::Spawn(Collectable {
-        collectable_type: CollectableType::Bananan,
-        spawn_type: SpawnType::RandomRange(IVec2::new(-10, 0), IVec2::new(10, 20)),
-    }));
-    */
+    current_level.1 = true;
 }
 
 #[derive(Bundle, Default)]
