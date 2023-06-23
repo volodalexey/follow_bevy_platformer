@@ -1,7 +1,8 @@
 use bevy::{
     prelude::{
-        AddAsset, AssetServer, Assets, Bundle, Commands, ComputedVisibility, EventWriter,
-        GlobalTransform, Handle, Res, ResMut, Resource, Transform, Visibility,
+        AddAsset, AssetServer, Assets, Bundle, Commands, Component, ComputedVisibility,
+        DespawnRecursiveExt, DetectChanges, Entity, EventWriter, GlobalTransform, Handle, Query,
+        Res, ResMut, Resource, Transform, Visibility, With,
     },
     sprite::{TextureAtlas, TextureAtlasSprite},
 };
@@ -25,7 +26,9 @@ impl bevy::prelude::Plugin for MapPlugin {
             .add_system(spawn_map_objects)
             .init_resource::<MapData>()
             .add_asset::<Level>()
-            .add_asset_loader(levels::LevelLoader);
+            .add_asset_loader(levels::LevelLoader)
+            .init_resource::<LoadedLevel>()
+            .add_system(load_map);
     }
 }
 
@@ -64,4 +67,38 @@ struct CellBundle {
     pub texture_atlas: Handle<TextureAtlas>,
     pub collider: Collider,
     pub rigid_body: RigidBody,
+    pub map_item: MapItem,
+}
+
+use crate::{ghost::GhostEvents, player::RealPlayer};
+
+#[derive(Resource, Default)]
+pub struct LoadedLevel(pub Handle<Level>);
+
+#[derive(Component, Default)]
+pub struct MapItem;
+
+fn load_map(
+    mut map_event: EventWriter<MapEvent>,
+    levels: Res<Assets<Level>>,
+    current_level: Res<LoadedLevel>,
+    map_item: Query<Entity, With<MapItem>>,
+    mut commands: Commands,
+    mut events: EventWriter<GhostEvents>,
+    mut player: Query<&mut Transform, With<RealPlayer>>,
+) {
+    if !current_level.is_changed() {
+        return;
+    }
+    let Some(level) = levels.get(&current_level.0) else {return;};
+    events.send(GhostEvents::ClearGhosts);
+    events.send(GhostEvents::ClearTrail);
+    let mut player = player.single_mut();
+    player.translation = level.player_start.as_vec2().extend(0.0);
+    for item in &map_item {
+        commands.entity(item).despawn_recursive();
+    }
+    for obj in level.objects.iter() {
+        map_event.send(MapEvent::Spawn(MapObject::clone(obj.as_ref())))
+    }
 }

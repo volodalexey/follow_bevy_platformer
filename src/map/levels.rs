@@ -18,16 +18,33 @@ use serde::{
 
 use super::{collectable::Collectable, square::MapBox, tile_map::MapObject};
 
-#[derive(TypeUuid)]
+#[derive(TypeUuid, Default)]
 #[uuid = "e6b53f1c-9471-465c-b411-7729177acb9e"]
 pub struct Level {
     pub player_start: IVec2,
     pub objects: Vec<Box<dyn MapObject>>,
 }
 
-// impl Level {
-//     pub fn from_base64(str: &str) -> Result<Level, anyhow::Error> {}
-// }
+#[allow(deprecated, dead_code)]
+impl Level {
+    pub fn from_base64(str: &str) -> Result<Level, anyhow::Error> {
+        let bytes = base64::decode(&str)?;
+        let Some(version) = bytes.first() else {return Err(anyhow::anyhow!("Need atleast one char in string"))};
+        match version {
+            0 => Ok(bincode::options()
+                .with_varint_encoding()
+                .deserialize(&bytes[1..])?),
+            _ => Err(anyhow::anyhow!("Unsuported version: {}", version)),
+        }
+    }
+    pub fn to_base64(&self) -> Result<String, bincode::Error> {
+        let mut bytes = vec![0];
+        bincode::options()
+            .with_varint_encoding()
+            .serialize_into(&mut bytes, &self)?;
+        Ok(base64::encode(bytes))
+    }
+}
 
 impl PartialEq for Level {
     fn eq(&self, other: &Self) -> bool {
@@ -243,19 +260,12 @@ fn bincode_serde() {
                 spawn_type: SpawnType::Fixed(IVec2 { x: 5, y: 5 }),
             }),
         ],
+        ..Default::default()
     };
 
-    let ser = bincode::options()
-        .with_varint_encoding()
-        .serialize(&level)
-        .unwrap();
-    #[allow(deprecated)]
-    let base64 = base64::encode(&ser);
-    assert_eq!(base64, "AAACABQIAAICAAEAAwoK");
-    println!("De = {};\nLen = {}\n{:?}", base64, ser.len(), &ser);
-    let de = bincode::options()
-        .with_varint_encoding()
-        .deserialize::<Level>(&ser)
-        .unwrap();
+    let ser = level.to_base64().expect("To base64 to work");
+    assert_eq!(ser, "AAAAAgAUCAACAgABAAMKCg==");
+    println!("De = {};\nLen = {}\n", ser, ser.len());
+    let de = Level::from_base64(&ser).expect("To Get level from str");
     assert!(level == de);
 }

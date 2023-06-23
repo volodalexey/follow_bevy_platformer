@@ -1,9 +1,6 @@
-use bevy::{
-    prelude::{
-        default, error, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IVec2, Name,
-        Query, Res, ResMut, Transform, Vec3, With,
-    },
-    sprite::SpriteSheetBundle,
+use bevy::prelude::{
+    default, error, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IVec2, Name,
+    Query, Res, ResMut, Transform, Vec3, With,
 };
 use bevy_rapier2d::prelude::{Collider, RapierContext, RigidBody, Sensor};
 use rand::Rng;
@@ -16,7 +13,10 @@ use crate::{
     Score,
 };
 
-use super::tile_map::{MapData, MapEvent, MapObject};
+use super::{
+    tile_map::{MapData, MapEvent, MapObject},
+    CellBundle,
+};
 
 pub fn get_collectable(
     mut commands: Commands,
@@ -155,14 +155,14 @@ impl MapObject for Collectable {
         let Some(animation) = terrain.get_animation(self.collectable_type.into()) else {error!("Animation for {:?} not loaded", self.collectable_type); return;};
 
         commands.spawn((
-            SpriteSheetBundle {
+            CellBundle {
                 transform: Transform::from_translation(pos),
                 texture_atlas: default(),
+                rigid_body: RigidBody::Fixed,
+                collider: Collider::ball(8.),
                 ..Default::default()
             },
             animation,
-            RigidBody::Fixed,
-            Collider::ball(8.),
             Sensor,
             Name::new("Collectable"),
             new_self,
