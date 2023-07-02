@@ -130,27 +130,28 @@ fn setup_main_menu(mut commands: Commands, font: Res<MenuFont>) {
             MenuItem,
         ))
         .with_children(|p| {
-            let size = Style {
+            let style = Style {
                 padding: UiRect::top(Val::Px(10.)),
                 size: Size::new(Val::Percent(100.), Val::Percent(20.)),
                 ..Default::default()
             };
             Size::new(Val::Percent(100.), Val::Percent(20.));
-            make_button(p, size.clone(), "Play", font.0.clone(), GameState::Play);
+            make_button(p, style.clone(), "Play", font.0.clone(), GameState::Play);
             make_button(
                 p,
-                size.clone(),
+                style.clone(),
                 "Base64",
                 font.0.clone(),
                 GameState::InputLevelBase64,
             );
             make_button(
                 p,
-                size,
+                style.clone(),
                 "CustomName",
                 font.0.clone(),
                 GameState::InputLevelName,
             );
+            make_button(p, style, "Editor", font.0.clone(), GameState::LevelEditor);
         });
 }
 
@@ -177,7 +178,7 @@ fn setup_level_select(
             MenuItem,
         ))
         .with_children(|p| {
-            let size = Style {
+            let style = Style {
                 padding: UiRect::top(Val::Px(10.)),
                 size: Size::new(Val::Percent(100.), Val::Percent(20.)),
                 ..Default::default()
@@ -185,13 +186,13 @@ fn setup_level_select(
             Size::new(Val::Percent(100.), Val::Percent(20.));
             make_button(
                 p,
-                size.clone(),
+                style.clone(),
                 "",
                 font.0.clone(),
                 GameState::InputLevelBase64,
             );
-            make_button(p, size.clone(), "Play", font.0.clone(), GameState::Play);
-            make_button(p, size, "", font.0.clone(), InputError);
+            make_button(p, style.clone(), "Play", font.0.clone(), GameState::Play);
+            make_button(p, style, "", font.0.clone(), InputError);
         });
 }
 

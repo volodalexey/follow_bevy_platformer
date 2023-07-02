@@ -209,7 +209,7 @@ impl<'a> Serialize for ObjectsSerializer<'a> {
         use serde::ser::SerializeMap;
         let mut map = serializer.serialize_map(Some(self.0.len()))?;
         for item in self.0 {
-            let item_data = item.serializable(); // else {error!("Can not reflect serializable"); continue;};
+            let item_data = item.serialize();
             match item_data {
                 bevy::reflect::serde::Serializable::Owned(v) => {
                     map.serialize_entry(&item.object_type(), &v)?

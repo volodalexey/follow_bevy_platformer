@@ -1,5 +1,6 @@
 mod animation;
 mod camera;
+mod editor;
 mod ghost;
 mod loader;
 mod map;
@@ -38,6 +39,7 @@ fn main() {
         .insert_resource(Score(0))
         .add_state::<GameState>()
         .add_plugin(menu::MenuPlugin)
+        .add_plugin(editor::LevelEditorPlugin)
         .run()
 }
 
@@ -51,4 +53,5 @@ enum GameState {
     Menu,
     InputLevelBase64,
     InputLevelName,
+    LevelEditor,
 }

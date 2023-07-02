@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::{
-    prelude::{Commands, EventReader, IVec2, Res, ResMut, Resource},
+    prelude::{Commands, Entity, EventReader, IVec2, Res, ResMut, Resource},
     reflect::{Reflect, ReflectSerialize},
 };
 use serde::{Deserialize, Serialize};
@@ -52,11 +52,20 @@ impl TerrainMaterial {
     }
 }
 
-pub trait MapObject: 'static + Send + Sync + std::any::Any {
-    fn spawn(&self, animation_data: &Animations, commands: &mut Commands, map_data: &mut MapData);
+pub trait MapObject: 'static + Send + Sync + std::any::Any + Reflect {
+    fn spawn(
+        &self,
+        animation_data: &Animations,
+        commands: &mut Commands,
+        map_data: &mut MapData,
+    ) -> Option<Entity>;
     fn object_type(&self) -> super::levels::MapObjectType;
-    fn serializable(&self) -> bevy::reflect::serde::Serializable;
+    fn serialize(&self) -> bevy::reflect::serde::Serializable;
     fn clone(&self) -> Box<dyn MapObject>;
+    fn ui_draw(&self, commands: &mut Commands, root: Entity);
+    fn ui_update(&mut self, func: fn(&mut dyn Reflect)) {
+        func(self.as_reflect_mut())
+    }
 }
 
 pub fn spawn_map_objects(

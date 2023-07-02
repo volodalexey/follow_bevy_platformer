@@ -1,6 +1,9 @@
-use bevy::prelude::{
-    default, error, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IVec2, Name,
-    Query, Res, ResMut, Transform, Vec3, With,
+use bevy::{
+    prelude::{
+        default, error, Commands, Component, DespawnRecursiveExt, Entity, EventWriter, IVec2, Name,
+        Query, Res, ResMut, Transform, Vec3, With,
+    },
+    reflect::Reflect,
 };
 use bevy_rapier2d::prelude::{Collider, RapierContext, RigidBody, Sensor};
 use rand::Rng;
@@ -47,13 +50,14 @@ pub fn get_collectable(
     }
 }
 
-#[derive(Component, Clone, Deserialize, Serialize)]
+#[derive(Component, Clone, Deserialize, Serialize, Reflect)]
 pub struct Collectable {
     pub collectable_type: CollectableType,
     pub spawn_type: SpawnType,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Reflect)]
+#[reflect_value()]
 pub enum CollectableType {
     Strawberry,
     Bananan,
@@ -68,7 +72,8 @@ impl Into<Animation> for CollectableType {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, Reflect)]
+#[reflect_value()]
 pub enum SpawnType {
     None,
     RandomRange(IVec2, IVec2),
@@ -81,12 +86,17 @@ pub enum SpawnType {
 const MAX_RNG_TRYS: usize = 50;
 
 impl MapObject for Collectable {
-    fn spawn(&self, terrain: &Animations, commands: &mut Commands, map_data: &mut MapData) {
+    fn spawn(
+        &self,
+        terrain: &Animations,
+        commands: &mut Commands,
+        map_data: &mut MapData,
+    ) -> Option<Entity> {
         let mut new_self = <Self as Clone>::clone(self);
         let mut set_none = false;
         let pos = match &mut new_self.spawn_type {
             SpawnType::None => {
-                return;
+                return None;
             }
             SpawnType::RandomRange(IVec2 { x: x0, y: y0 }, IVec2 { x: x1, y: y1 }) => {
                 let mut rng = rand::thread_rng();
@@ -96,7 +106,7 @@ impl MapObject for Collectable {
                 loop {
                     if trys > MAX_RNG_TRYS {
                         error!("Too many rng trys");
-                        return;
+                        return None;
                     }
                     trys += 1;
                     let x = rng.gen_range(x_range.clone());
@@ -109,7 +119,7 @@ impl MapObject for Collectable {
             SpawnType::RandomPoints(points) => {
                 if points.len() == 0 {
                     error!("No Random points given");
-                    return;
+                    return None;
                 }
                 let IVec2 { x, y } = points[rand::thread_rng().gen_range(0..points.len())];
                 Vec3::new(x as f32 * 16., y as f32 * 16., 1.)
@@ -121,7 +131,7 @@ impl MapObject for Collectable {
             SpawnType::Order(list, index) => {
                 if list.len() == 0 {
                     error!("Order Can't Be Empty");
-                    return;
+                    return None;
                 }
                 *index += 1;
                 *index %= list.len();
@@ -129,7 +139,7 @@ impl MapObject for Collectable {
                 Vec3::new(x as f32 * 16., y as f32 * 16., 1.)
             }
             SpawnType::OrderDec(list) => {
-                let Some(IVec2{x, y}) = list.pop() else {error!("OrderDec Can't Be Empty"); return;};
+                let Some(IVec2{x, y}) = list.pop() else {error!("OrderDec Can't Be Empty"); return None;};
                 if list.len() == 0 {
                     set_none = true;
                 }
@@ -138,7 +148,7 @@ impl MapObject for Collectable {
             SpawnType::RandomPointsDec(points) => {
                 if points.len() == 0 {
                     error!("RandomPointsDec Can't Be Empty");
-                    return;
+                    return None;
                 } else if points.len() == 1 {
                     set_none = true;
                 }
@@ -152,29 +162,36 @@ impl MapObject for Collectable {
         if set_none {
             new_self.spawn_type = SpawnType::None;
         }
-        let Some(animation) = terrain.get_animation(self.collectable_type.into()) else {error!("Animation for {:?} not loaded", self.collectable_type); return;};
+        let Some(animation) = terrain.get_animation(self.collectable_type.into()) else {error!("Animation for {:?} not loaded", self.collectable_type); return None;};
 
-        commands.spawn((
-            CellBundle {
-                transform: Transform::from_translation(pos),
-                texture_atlas: default(),
-                rigid_body: RigidBody::Fixed,
-                collider: Collider::ball(8.),
-                ..Default::default()
-            },
-            animation,
-            Sensor,
-            Name::new("Collectable"),
-            new_self,
-        ));
+        Some(
+            commands
+                .spawn((
+                    CellBundle {
+                        transform: Transform::from_translation(pos),
+                        texture_atlas: default(),
+                        rigid_body: RigidBody::Fixed,
+                        collider: Collider::ball(8.),
+                        ..Default::default()
+                    },
+                    animation,
+                    Sensor,
+                    Name::new("Collectable"),
+                    new_self,
+                ))
+                .id(),
+        )
     }
     fn object_type(&self) -> super::levels::MapObjectType {
         super::levels::MapObjectType::Collectable
     }
-    fn serializable(&self) -> bevy::reflect::serde::Serializable {
+    fn serialize(&self) -> bevy::reflect::serde::Serializable {
         bevy::reflect::serde::Serializable::Borrowed(self)
     }
     fn clone(&self) -> Box<dyn MapObject> {
         Box::new(<Self as Clone>::clone(self))
+    }
+    fn ui_draw(&self, _commands: &mut Commands, _root: Entity) {
+        todo!()
     }
 }

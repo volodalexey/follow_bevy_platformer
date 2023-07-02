@@ -9,7 +9,7 @@ use bevy::{
 use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 pub use self::levels::Level;
-use self::tile_map::{spawn_map_objects, MapData, MapEvent, MapObject};
+pub use self::tile_map::{spawn_map_objects, MapData, MapEvent, MapObject};
 
 mod collectable;
 mod levels;
